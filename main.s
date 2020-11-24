@@ -31,6 +31,38 @@ loop        lda message, x
             jsr CCHROUT
             inx
             bne loop
-finished    rts
+
+finished
+            ; move character set to ram at 7168
+            lda #$ff
+            sta $9005
+
+            ; copy character set from 32768 to 7168 (only first 512 bytes, this gets me alphanumerics)
+            ldy #$00
+charsetCopy
+            lda $8000,y
+            sta $1c00,y
+            lda $8100,y
+            sta $1d00,y
+            iny
+            bne charsetCopy
+
+            rts
 
 message     .asc "HELLO, WORLD!" : .byt 0
+endCode
+
+            ; fill to charset
+            * = $1e00
+            .dsb (*-endCode), 0
+            * = $1e00
+
+            ; add my unique characters here
+            .byt %00111100
+            .byt %01000010
+            .byt %10000001
+            .byt %10000001
+            .byt %10000001
+            .byt %10000001
+            .byt %01000010
+            .byt %00111100
