@@ -20,7 +20,7 @@ CCHROUT   = $FFD2             ; Output character to current output device
             .byt  TOK_REM     ; REM token
             .asc  " "
             .dsb  15,BSPACE   ; Backspace characters to make line invisible
-            .asc  "(C) 2020 LORRY WOODMAN"
+            .asc  "(C) GURCE ISIKYILDIZ"
             .byt  0           ; End of Basic line
 basicEnd    .word 0           ; End of Basic program
 
@@ -33,6 +33,11 @@ loop        lda message, x
             bne loop
 
 finished
+            ; change end of basic
+            lda #$1c
+            sta $34
+            sta $38
+
             ; move character set to ram at 7168
             lda #$ff
             sta $9005
