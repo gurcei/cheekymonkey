@@ -1,8 +1,10 @@
+#!/usr/local/bin/python
 # convert my png frames into charset data
 import wx
 import glob
 
 def convImg(imgpath):
+  global idx
   out = ''
   img = wx.Image(imgpath, wx.BITMAP_TYPE_ANY)
   width = img.GetWidth()
@@ -28,6 +30,7 @@ def convImg(imgpath):
         s = s + " ${:02x}".format(val)
       print(s)
       out = out + s + '\n'
+      idx = idx + 1
 
   #import pdb; pdb.set_trace()
   return out
@@ -35,8 +38,13 @@ def convImg(imgpath):
 app = wx.App()
 imgs = glob.glob('*.png')
 f = open('charset.s', 'wt')
+fi = open('spridx.s', 'wt')
+idx = 64
+
 for img in imgs:
+  fi.write('IMG_'+img.split('.')[0] + ' = ${:02x}\n'.format(idx))
   out = convImg(img)
   f.write(out)
 
+fi.close()
 f.close()

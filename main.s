@@ -1,6 +1,8 @@
 ; BASIC stub code borrowed from:
 ; https://techtinkering.com/articles/adding-basic-stubs-to-assembly-language-on-the-commodore-vic-20/
 
+#include "spridx.s"
+
 BSPACE    = $14               ; Backspace character
 COLON     = $3A               ; Colon character
 TOK_REM   = $8F               ; REM token
