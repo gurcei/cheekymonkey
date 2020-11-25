@@ -1,3 +1,4 @@
 *.prg
 .DS_Store
 *.swp
+charset.s

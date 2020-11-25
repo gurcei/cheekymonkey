@@ -34,21 +34,21 @@ loop        lda message, x
 
 finished
             ; change end of basic
-            lda #$1c
-            sta $34
-            sta $38
+            ; lda #$1c
+            ; sta $34
+            ; sta $38
 
-            ; move character set to ram at 7168
-            lda #$ff
+            ; move character set to ram at 6144
+            lda #$fe
             sta $9005
 
             ; copy character set from 32768 to 7168 (only first 512 bytes, this gets me alphanumerics)
             ldy #$00
 charsetCopy
             lda $8000,y
-            sta $1c00,y
+            sta $1800,y
             lda $8100,y
-            sta $1d00,y
+            sta $1900,y
             iny
             bne charsetCopy
 
@@ -58,13 +58,11 @@ message     .asc "HELLO, WORLD!" : .byt 0
 endCode
 
             ; fill to charset
-            * = $1e00
+            * = $1a00
             .dsb (*-endCode), 0
-            * = $1e00
+            * = $1a00
 
             ; add my unique characters here
-            ; walk1.png
-            .byt $00, $00, $07, $09, $0b, $17, $30, $4b
-            .byt $00, $00, $c0, $20, $70, $d0, $10, $b0
-            .byt $90, $8c, $42, $3a, $14, $23, $4c, $78
-            .byt $10, $28, $48, $70, $10, $b8, $84, $7c
+            ; currently 464 bytes long (58 chars)
+            ; mem range is 1a00 (6656) to 1fd0 (7120)
+#include "charset.s"
