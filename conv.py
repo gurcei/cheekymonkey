@@ -42,7 +42,7 @@ fi = open('spridx.s', 'wt')
 idx = 64
 
 for img in imgs:
-  fi.write('IMG_'+img.split('.')[0] + ' = ${:02x}\n'.format(idx))
+  fi.write('IMG_'+img.split('.')[0].upper() + ' = ${:02x}\n'.format(idx))
   out = convImg(img)
   f.write(out)
 

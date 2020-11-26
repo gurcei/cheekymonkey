@@ -8,6 +8,9 @@ COLON     = $3A               ; Colon character
 TOK_REM   = $8F               ; REM token
 TOK_SYS   = $9E               ; SYS token
 
+SCREENRAM   = $1E00
+COLOURRAM   = $9600 ; (or $9400 for expanded vic)
+
 CCHROUT   = $FFD2             ; Output character to current output device
 
             .byt  $01, $10    ; Load address ($1001)
@@ -54,9 +57,60 @@ charsetCopy
             iny
             bne charsetCopy
 
+            lda #IMG_WALK1
+            ldx px
+            ldy py
+            jsr drawImg
+            rts
+
+; --------
+drawImg
+; --------
+            pha
+            lda #<SCREENRAM
+            sta loc
+            lda #>SCREENRAM
+            sta loc+1
+
+            ; add 40 for each y
+            cpy #$00
+            beq _diAddX
+_diLoopY
+            lda loc
+            clc
+            adc #40
+            sta loc
+            lda loc+1
+            adc #00
+            sta loc+1
+
+            dey
+            bne _diLoopY
+            
+_diAddX
+            clc
+            txa
+            adc loc
+            sta loc
+            lda loc+1
+            sta loc+1
+
+            ; put to zero page
+            lda loc
+            sta $fe
+            lda loc+1
+            sta $ff
+
+            ; put character here
+            pla
+            sta ($fe)
             rts
 
 message     .asc "HELLO, WORLD!" : .byt 0
+px          .byt 00
+py          .byt 00
+loc         .word 0000
+
 endCode
 
             ; fill to charset
