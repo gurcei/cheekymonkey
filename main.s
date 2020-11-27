@@ -38,6 +38,9 @@ loop        lda message, x
             bne loop
 
 finished
+; ----------
+; INIT
+; ----------
             ; change end of basic
             ; lda #$1c
             ; sta $34
@@ -57,10 +60,37 @@ charsetCopy
             iny
             bne charsetCopy
 
-            lda #IMG_WALK1
+; ----------
+; MAIN
+; ----------
+main
+            ; draw stuff
+            ldy anmidx
+            lda anmwalk,y
             ldx px
             ldy py
             jsr drawImg
+
+            ; add pause/delay after drawing screen contents
+            ldx#$80
+m2
+            ldy#$00
+m1
+            dey
+            bne m1
+
+            dex
+            bne m2
+
+            ; change frame
+            ldy anmidx
+            iny
+            sty anmidx
+            cpy #$04
+            bne main
+            ldy #$00
+            sty anmidx
+            jmp main
             rts
 
 ; --------
@@ -176,12 +206,16 @@ botleft
             
             rts
 
-
+;------------
+; DATA
+;------------
 message     .asc "HELLO, WORLD!" : .byt 0
 px          .byt 04
 py          .byt 04
 loc         .word 0000
 color       .byt 00
+anmwalk     .byt IMG_WALK1, IMG_WALK2, IMG_WALK3, IMG_WALK2
+anmidx      .byt 00
 
 endCode
 
@@ -190,6 +224,9 @@ endCode
             .dsb (*-endCode), 0
             * = $1a00
 
+;------------
+; CHARSET
+;------------
             ; add my unique characters here
             ; currently 464 bytes long (58 chars)
             ; mem range is 1a00 (6656) to 1fd0 (7120)
