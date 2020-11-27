@@ -64,21 +64,20 @@ charsetCopy
             rts
 
 ; --------
-drawImg
+calcXYloc
 ; --------
             pha
-            lda #<SCREENRAM
-            sta loc
-            lda #>SCREENRAM
-            sta loc+1
-
-            ; add 40 for each y
+            txa
+            pha
+            tya
+            pha
+            ; add 22 for each y
             cpy #$00
             beq _diAddX
 _diLoopY
             lda loc
             clc
-            adc #40
+            adc #22
             sta loc
             lda loc+1
             adc #00
@@ -88,28 +87,101 @@ _diLoopY
             bne _diLoopY
             
 _diAddX
-            clc
             txa
+            clc
             adc loc
             sta loc
-            lda loc+1
+            lda #$00
+            adc loc+1
             sta loc+1
+            pla
+            tay
+            pla
+            tax
+            pla
+            rts
 
-            ; put to zero page
+
+; --------
+drawImg
+; --------
+            pha
+            lda #<SCREENRAM
+            sta loc
+            lda #>SCREENRAM
+            sta loc+1
+            jsr calcXYloc
+
+            ; put to zero page at $fe-$ff
             lda loc
             sta $fe
             lda loc+1
             sta $ff
 
+            lda #<COLOURRAM
+            sta loc
+            lda #>COLOURRAM
+            sta loc+1
+            jsr calcXYloc
+
+            ; put to zero page at $fc-$fd
+            lda loc
+            sta $fc
+            lda loc+1
+            sta $fd
+
             ; put character here
             pla
-            sta ($fe)
+            ldy #$00
+            sta ($fe),y
+            pha
+            lda color
+            sta ($fc),y
+            pla
+
+            ; draw next char to right
+            clc
+            adc #1
+            iny
+            sta ($fe),y
+            pha
+            lda color
+            sta ($fc),y
+            pla
+
+botleft
+            ; draw in bottom-left
+            clc
+            adc #1
+            pha
+            tya
+            adc #$15
+            tay
+            pla
+            sta ($fe),y
+            pha
+            lda color
+            sta ($fc),y
+            pla
+
+            ; draw in bottom-right
+            clc
+            adc #1
+            iny
+            sta ($fe),y
+            pha
+            lda color
+            sta ($fc),y
+            pla
+            
             rts
 
+
 message     .asc "HELLO, WORLD!" : .byt 0
-px          .byt 00
-py          .byt 00
+px          .byt 04
+py          .byt 04
 loc         .word 0000
+color       .byt 00
 
 endCode
 

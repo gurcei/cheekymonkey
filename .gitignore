@@ -2,3 +2,5 @@
 .DS_Store
 *.swp
 charset.s
+spridx.s
+labels.txt
