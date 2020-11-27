@@ -83,7 +83,12 @@ m1
             bne m2
 
             ; clear player image
+            ldx px
+            ldy py
             jsr clearImg
+
+            ; get keyboard input
+            jsr getKeyboardInput
 
             ; change frame
             ldy anmidx
@@ -96,6 +101,49 @@ m1
             jmp main
             rts
 
+; --------
+getKeyboardInput
+; --------
+            lda #$00
+            sta $9113 ; DDR for PortA on VIA#1
+
+            ; check joyright
+            lda #127
+            sta $9122 ; set  bit7 as input on DDR for PortB on VIA#2
+            lda #128
+            bit $9120 ; PortB on VIA#2 (Bit7 = JoyRight)
+            bne checkJoyLeft
+            inc px
+
+checkJoyLeft
+            lda #255
+            sta $9122 ; set bit7 as output DDR for PortB on VIA#2
+
+            lda $9111 ; PortA on VIA#1 (Bit2 = JoyUp, Bit3 = JoyDown, Bit4 = JoyLeft, Bit5 = JoyFire)
+            sta $ff
+
+            ; checkLeft
+            lda #$10
+            bit $ff
+            bne checkJoyUp
+            dec px
+
+checkJoyUp
+            lda #$04
+            bit $ff
+            bne checkJoyDown
+            dec py
+
+checkJoyDown
+            lda #$08
+            bit $ff
+            bne endCheck
+            inc py
+
+endCheck
+            rts
+            
+            
 ; --------
 calcXYloc
 ; --------
@@ -166,6 +214,37 @@ prepareScreenPtrs
 clearImg
 ; --------
             jsr prepareScreenPtrs
+
+            ; top-left char
+            ldy #$00
+            lda pbuff
+            sta ($fe),y
+            lda pcolbuff
+            sta ($fc),y
+
+            ; top-right char
+            iny
+            lda pbuff+1
+            sta ($fe),y
+            lda pcolbuff+1
+            sta ($fc),y
+
+            ; bot-left char
+            tya
+            clc
+            adc #21
+            tay
+            lda pbuff+2
+            sta ($fe),y
+            lda pcolbuff+2
+            sta ($fc),y
+
+            ; bot-right char
+            iny
+            lda pbuff+3
+            sta ($fe),y
+            lda pcolbuff+3
+            sta ($fc),y
             rts
 
 ; --------
