@@ -82,6 +82,9 @@ m1
             dex
             bne m2
 
+            ; clear player image
+            jsr clearImg
+
             ; change frame
             ldy anmidx
             iny
@@ -131,11 +134,9 @@ _diAddX
             pla
             rts
 
-
 ; --------
-drawImg
+prepareScreenPtrs
 ; --------
-            pha
             lda #<SCREENRAM
             sta loc
             lda #>SCREENRAM
@@ -159,12 +160,29 @@ drawImg
             sta $fc
             lda loc+1
             sta $fd
+            rts
 
-            ; put character here
-            pla
+; --------
+clearImg
+; --------
+            jsr prepareScreenPtrs
+            rts
+
+; --------
+drawImg
+; --------
+            pha
+            jsr prepareScreenPtrs
+
+            ; put character here (preserve old character in pbuff and pcolbuff)
             ldy #$00
+            lda ($fe),y
+            sta pbuff
+            pla
             sta ($fe),y
             pha
+            lda ($fc),y
+            sta pcolbuff
             lda color
             sta ($fc),y
             pla
@@ -173,13 +191,18 @@ drawImg
             clc
             adc #1
             iny
+            pha
+            lda ($fe),y
+            sta pbuff+1
+            pla
             sta ($fe),y
             pha
+            lda ($fc),y
+            sta pcolbuff+1
             lda color
             sta ($fc),y
             pla
 
-botleft
             ; draw in bottom-left
             clc
             adc #1
@@ -187,9 +210,13 @@ botleft
             tya
             adc #$15
             tay
+            lda ($fe),y
+            sta pbuff+2
             pla
             sta ($fe),y
             pha
+            lda ($fc),y
+            sta pcolbuff+2
             lda color
             sta ($fc),y
             pla
@@ -198,8 +225,14 @@ botleft
             clc
             adc #1
             iny
+            pha
+            lda ($fe),y
+            sta pbuff+3
+            pla
             sta ($fe),y
             pha
+            lda ($fc),y
+            sta pcolbuff+3
             lda color
             sta ($fc),y
             pla
@@ -212,6 +245,8 @@ botleft
 message     .asc "HELLO, WORLD!" : .byt 0
 px          .byt 04
 py          .byt 04
+pbuff       .byt 00, 00, 00, 00
+pcolbuff    .byt 00, 00, 00, 00
 loc         .word 0000
 color       .byt 00
 anmwalk     .byt IMG_WALK1, IMG_WALK2, IMG_WALK3, IMG_WALK2
