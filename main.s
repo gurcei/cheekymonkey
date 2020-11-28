@@ -64,15 +64,22 @@ charsetCopy
 ; MAIN
 ; ----------
 main
+            ; store current animation ptr at $fa-fb
+            lda #<anmwalk
+            sta $fa
+            lda #>anmwalk
+            sta $fb
+
+mainloop
             ; draw stuff
             ldy anmidx
-            lda anmwalk,y
+            lda ($fa),y
             ldx px
             ldy py
             jsr drawImg
 
             ; add pause/delay after drawing screen contents
-            ldx#$80
+            ldx#$40
 m2
             ldy#$00
 m1
@@ -88,17 +95,24 @@ m1
             jsr clearImg
 
             ; get keyboard input
+            ldx keyinpause
+            inx
+            cpx #$03
+            bne changeFrame
             jsr getKeyboardInput
+            ldx #$00
 
+changeFrame
+            stx keyinpause
             ; change frame
             ldy anmidx
             iny
             sty anmidx
             cpy #$04
-            bne main
+            bne mainloop
             ldy #$00
             sty anmidx
-            jmp main
+            jmp mainloop
             rts
 
 ; --------
@@ -114,6 +128,11 @@ getKeyboardInput
             bit $9120 ; PortB on VIA#2 (Bit7 = JoyRight)
             bne checkJoyLeft
             inc px
+            ; store current animation ptr at $fa-fb
+            lda #<anmwalk
+            sta $fa
+            lda #>anmwalk
+            sta $fb
 
 checkJoyLeft
             lda #255
@@ -127,18 +146,33 @@ checkJoyLeft
             bit $ff
             bne checkJoyUp
             dec px
+            ; store current animation ptr at $fa-fb
+            lda #<anmwalk
+            sta $fa
+            lda #>anmwalk
+            sta $fb
 
 checkJoyUp
             lda #$04
             bit $ff
             bne checkJoyDown
             dec py
+            ; store current animation ptr at $fa-fb
+            lda #<anmclimb
+            sta $fa
+            lda #>anmclimb
+            sta $fb
 
 checkJoyDown
             lda #$08
             bit $ff
             bne endCheck
             inc py
+            ; store current animation ptr at $fa-fb
+            lda #<anmclimb
+            sta $fa
+            lda #>anmclimb
+            sta $fb
 
 endCheck
             rts
@@ -329,7 +363,9 @@ pcolbuff    .byt 00, 00, 00, 00
 loc         .word 0000
 color       .byt 00
 anmwalk     .byt IMG_WALK1, IMG_WALK2, IMG_WALK3, IMG_WALK2
+anmclimb    .byt IMG_CLIMB1, IMG_CLIMB2, IMG_CLIMB3, IMG_CLIMB2
 anmidx      .byt 00
+keyinpause  .byt 00
 
 endCode
 
