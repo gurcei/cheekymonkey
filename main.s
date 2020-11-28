@@ -8,6 +8,12 @@ COLON     = $3A               ; Colon character
 TOK_REM   = $8F               ; REM token
 TOK_SYS   = $9E               ; SYS token
 
+PJOY_LEFT  = $01
+PJOY_RIGHT = $02
+PJOY_UP    = $04
+PJOY_DOWN  = $08
+PJOY_FIRE  = $10
+
 SCREENRAM   = $1E00
 COLOURRAM   = $9600 ; (or $9400 for expanded vic)
 
@@ -99,7 +105,7 @@ m1
             inx
             cpx #$03
             bne changeFrame
-            jsr getKeyboardInput
+            jsr getJoystickInput
             ldx #$00
 
 changeFrame
@@ -116,10 +122,11 @@ changeFrame
             rts
 
 ; --------
-getKeyboardInput
+getJoystickInput
 ; --------
             lda #$00
             sta $9113 ; DDR for PortA on VIA#1
+            sta pjoy
 
             ; check joyright
             lda #127
@@ -128,6 +135,10 @@ getKeyboardInput
             bit $9120 ; PortB on VIA#2 (Bit7 = JoyRight)
             bne checkJoyLeft
             inc px
+            ; store in joy buffer
+            lda pjoy
+            ora #PJOY_RIGHT
+            sta pjoy
             ; store current animation ptr at $fa-fb
             lda #<anmwalk
             sta $fa
@@ -146,6 +157,10 @@ checkJoyLeft
             bit $ff
             bne checkJoyUp
             dec px
+            ; store in joy buffer
+            lda pjoy
+            ora #PJOY_LEFT
+            sta pjoy
             ; store current animation ptr at $fa-fb
             lda #<anmwalk
             sta $fa
@@ -157,6 +172,10 @@ checkJoyUp
             bit $ff
             bne checkJoyDown
             dec py
+            ; store in joy buffer
+            lda pjoy
+            ora #PJOY_UP
+            sta pjoy
             ; store current animation ptr at $fa-fb
             lda #<anmclimb
             sta $fa
@@ -166,14 +185,47 @@ checkJoyUp
 checkJoyDown
             lda #$08
             bit $ff
-            bne endCheck
+            bne checkJoyFire
             inc py
+            ; store in joy buffer
+            lda pjoy
+            ora #PJOY_DOWN
+            sta pjoy
             ; store current animation ptr at $fa-fb
             lda #<anmclimb
             sta $fa
             lda #>anmclimb
             sta $fb
 
+checkJoyFire
+            lda #$20
+            bit $ff
+            bne endCheck
+            ; check if left is pressed too
+            lda pjoy
+            and #PJOY_LEFT
+            beq checkFireAndRight
+            lda #<anmthrowleft
+            sta $fa
+            lda #>anmthrowleft
+            sta $fb
+            jmp endCheck
+checkFireAndRight
+            ;check if right is pressed too
+            lda pjoy
+            and #PJOY_RIGHT
+            beq fireOnly
+            lda #<anmthrowright
+            sta $fa
+            lda #>anmthrowright
+            sta $fb
+            jmp endCheck
+fireOnly
+            ;fire only
+            lda #<anmthrowup
+            sta $fa
+            lda #>anmthrowup
+            sta $fb
 endCheck
             rts
             
@@ -358,12 +410,16 @@ drawImg
 message     .asc "HELLO, WORLD!" : .byt 0
 px          .byt 04
 py          .byt 04
+pjoy        .byt 00   ; bit0=left, bit1=right, bit2=up, bit3=down, bit4=fire
 pbuff       .byt 00, 00, 00, 00
 pcolbuff    .byt 00, 00, 00, 00
 loc         .word 0000
 color       .byt 00
 anmwalk     .byt IMG_WALK1, IMG_WALK2, IMG_WALK3, IMG_WALK2
 anmclimb    .byt IMG_CLIMB1, IMG_CLIMB2, IMG_CLIMB3, IMG_CLIMB2
+anmthrowright .byt IMG_THROWDOWN3, IMG_THROWDOWN2, IMG_THROWDOWN1, IMG_THROWDOWN2
+anmthrowup  .byt IMG_THROWDOWN2, IMG_THROWDOWN1, IMG_THROWUP1, IMG_THROWDOWN1
+anmthrowleft .byt IMG_THROWDOWN1, IMG_THROWUP1, IMG_THROWUP2, IMG_THROWUP1
 anmidx      .byt 00
 keyinpause  .byt 00
 
