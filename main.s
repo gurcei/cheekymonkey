@@ -227,11 +227,25 @@ m3
 ; ----------
 animateFire
 ; ----------
+            ; handle horizontal
+            lda pfireflag
+            cmp #$01
+            bne af4
+            dec pfirex
+
+af4
+            cmp #$03
+            bne af5
+            inc pfirex
+
+af5
             lda #$00
             sta COLOURRAM
             inc pfiretime
             lda pfiretime
             sta SCREENRAM
+
+            ; handle vertical
             cmp #$06
             bcs af1
             dec pfirey
@@ -273,6 +287,7 @@ mainloop
 
             lda pfireflag
             beq mnoFire
+
             jsr clearFire
             jsr animateFire
 
