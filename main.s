@@ -225,6 +225,29 @@ m3
             rts
 
 ; ----------
+animateFire
+; ----------
+            lda #$00
+            sta COLOURRAM
+            inc pfiretime
+            lda pfiretime
+            sta SCREENRAM
+            cmp #$06
+            bcs af1
+            dec pfirey
+            jmp af2
+af1
+            inc pfirey
+af2
+            cmp #$0c
+            bne af3
+            lda #$00
+            sta pfireflag
+
+af3
+            rts
+
+; ----------
 ; MAIN
 ; ----------
 main
@@ -248,8 +271,12 @@ mainloop
 
             jsr loopDelay
 
+            lda pfireflag
+            beq mnoFire
             jsr clearFire
+            jsr animateFire
 
+mnoFire
             ; clear player image
             ldx px
             ldy py
@@ -363,6 +390,8 @@ actCheckFire
             lda pjoy
             and #PJOY_FIRE
             beq actCheckLeft
+            lda #$00
+            sta pfiretime
 
 actCheckFireRight
             lda pjoy
