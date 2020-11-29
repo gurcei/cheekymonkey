@@ -128,7 +128,6 @@ grassloop
             jsr drawLadder
             rts
 
-asdfasdf
 ; --------
 drawLadder
 ; --------
@@ -165,6 +164,36 @@ ladderLoop
             rts
 
 ; ----------
+drawPlayer
+; ----------
+            ; draw player
+            lda #06   ; blue color
+            sta color
+            ldy anmidx
+            lda ($fa),y
+            ldx px
+            ldy py
+            jsr drawImg2x2
+            rts
+
+; ----------
+drawFire
+; ----------
+            ; draw fire
+            lda pfireflag
+            beq dfend
+            lda #$00
+            sta color ; coconuts are black
+            lda #IMG_COCONUT1
+            ldx pfirex
+            ldy pfirey
+            jsr drawImg
+            sta pfirebuf
+
+dfend
+            rts
+
+; ----------
 ; MAIN
 ; ----------
 main
@@ -178,16 +207,13 @@ main
             sta px
             lda #20
             sta py
+            
+            lda #$00
+            sta pfireflag
 
 mainloop
-            ; draw player
-            lda #00   ; black color
-            sta color
-            ldy anmidx
-            lda ($fa),y
-            ldx px
-            ldy py
-            jsr drawImg2x2
+            jsr drawPlayer
+            jsr drawFire
 
             ; add pause/delay after drawing screen contents
             ldx#$40
@@ -200,6 +226,15 @@ m1
             dex
             bne m2
 
+            ; clear fire
+            lda pfireflag
+            beq m3
+            lda pfirebuf
+            ldx pfirex
+            ldy pfirey
+            jsr drawImg
+
+m3
             ; clear player image
             ldx px
             ldy py
@@ -290,6 +325,19 @@ checkJoyFire
 endCheck
             rts
 
+; -------
+initPlayerFire
+; -------
+            ldx px
+            inx
+            stx pfirex
+            ldy py
+            dey
+            sty pfirey
+            lda #$00
+            lda pfiretime
+            rts
+
 ; --------
 actOnJoystickInput
 ; --------
@@ -306,6 +354,9 @@ actCheckFireRight
             and #PJOY_RIGHT
             beq actCheckFireLeft
             LOADANIM(anmthrowright)
+            lda #$03
+            sta pfireflag
+            jsr initPlayerFire
             jmp actEnd
 
 actCheckFireLeft
@@ -313,10 +364,16 @@ actCheckFireLeft
             and #PJOY_LEFT
             beq actFireOnly
             LOADANIM(anmthrowleft)
+            lda #$01
+            sta pfireflag
+            jsr initPlayerFire
             jmp actEnd
 
 actFireOnly
             LOADANIM(anmthrowup)
+            lda #$02
+            sta pfireflag
+            jsr initPlayerFire
             jmp actEnd
 
 actCheckLeft
@@ -477,11 +534,14 @@ drawImg
 ; --------
             pha
             jsr prepareScreenPtrs
-            pla
             ldy #$00
+            lda ($fe),y ; preserve value written over
+            tax
+            pla
             sta ($fe),y
             lda color
             sta ($fc),y
+            txa ; return a = value written over
             rts
 
 ; --------
@@ -566,16 +626,22 @@ pbuff       .byt 00, 00, 00, 00
 pcolbuff    .byt 00, 00, 00, 00
 loc         .word 0000
 color       .byt 00
-anmwalk     .byt IMG_WALK1, IMG_WALK2, IMG_WALK3, IMG_WALK2
-anmclimb    .byt IMG_CLIMB1, IMG_CLIMB2, IMG_CLIMB3, IMG_CLIMB2
+anmwalk       .byt IMG_WALK1, IMG_WALK2, IMG_WALK3, IMG_WALK2
+anmclimb      .byt IMG_CLIMB1, IMG_CLIMB2, IMG_CLIMB3, IMG_CLIMB2
 anmthrowright .byt IMG_THROWDOWN3, IMG_THROWDOWN2, IMG_THROWDOWN1, IMG_THROWDOWN2
-anmthrowup  .byt IMG_THROWDOWN2, IMG_THROWDOWN1, IMG_THROWUP1, IMG_THROWDOWN1
-anmthrowleft .byt IMG_THROWDOWN1, IMG_THROWUP1, IMG_THROWUP2, IMG_THROWUP1
+anmthrowup    .byt IMG_THROWDOWN2, IMG_THROWDOWN1, IMG_THROWUP1, IMG_THROWDOWN1
+anmthrowleft  .byt IMG_THROWDOWN1, IMG_THROWUP1, IMG_THROWUP2, IMG_THROWUP1
+anmcoconut    .byt IMG_COCONUT1, IMG_COCONUT2, IMG_COCONUT3, IMG_COCONUT2
 anmidx      .byt 00
 keyinpause  .byt 00
 tmp1        .byt 00
 tmp2        .byt 00
 tmp3        .byt 00
+pfireflag   .byt 00 ; 0 = fire off, 1 = fire left, 2 = fire up, 3 = fire right
+pfirex      .byt 00
+pfirey      .byt 00
+pfiretime   .byt 00 ; how long the fire of the coconut has been active
+pfirebuf    .byt 00 ; what char was written on top of
 
 endCode
 
