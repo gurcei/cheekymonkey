@@ -17,7 +17,8 @@ PJOY_FIRE  = $10
 SCREENRAM   = $1E00
 COLOURRAM   = $9600 ; (or $9400 for expanded vic)
 
-CCHROUT   = $FFD2             ; Output character to current output device
+CHROUT   = $FFD2             ; Output character to current output device
+PLOT     = $FFF0             ; Set (clc) or get (sec) cursor position
 
             .byt  $01, $10    ; Load address ($1001)
 
@@ -26,7 +27,7 @@ CCHROUT   = $FFD2             ; Output character to current output device
             .word 2020        ; The line number for the SYS statement
             .byt  TOK_SYS     ; SYS token
             .asc  " "
-            .asc  "4150"      ; Start of machine language
+            .asc  "4150"      ; Start of machine language (0x1036)
             .byt  COLON       ; Colon character
             .byt  TOK_REM     ; REM token
             .asc  " "
@@ -39,7 +40,7 @@ basicEnd    .word 0           ; End of Basic program
             ldx #$00
 loop        lda message, x
             beq finished
-            jsr CCHROUT
+            jsr CHROUT
             inx
             bne loop
 
@@ -66,11 +67,102 @@ charsetCopy
             iny
             bne charsetCopy
 
+            jmp main
+
 #define LOADANIM(anim)  \
   lda #<anim :           \
   sta $fa    :           \
   lda #>anim :           \
   sta $fb
+
+drawGameScreen
+            ; clear the screen
+            lda #147
+            jsr CHROUT
+
+            ; draw the grass
+            ; lda #$1E  ; green colour
+            ; jsr CHROUT
+
+            ; ldx #22
+            ; ldy #21
+            ; clc
+            ; jsr PLOT
+
+            lda #00
+            sta tmp1
+            lda #05 ; green
+            sta color
+
+grassloop
+            ; lower layer
+            ldx tmp1
+            ldy #22
+            lda #IMG_GRASS
+            jsr drawImg
+
+            ; mid layer
+            ldx tmp1
+            ldy #15
+            lda #IMG_GRASS
+            jsr drawImg
+
+            ; top layer
+            ldx tmp1
+            ldy #8
+            lda #IMG_GRASS
+            jsr drawImg
+
+            ldx tmp1
+            inx
+            stx tmp1
+            cpx #22
+            bne grassloop
+            
+            ldx #02
+            ldy #09
+            jsr drawLadder
+
+            ldx #18
+            ldy #16
+            jsr drawLadder
+            rts
+
+asdfasdf
+; --------
+drawLadder
+; --------
+            ; draw ladders
+            stx tmp1
+            sty tmp2
+            lda #07 ; yellow
+            sta color
+
+            lda #00
+            sta tmp3  ; tmp3 will hold the rung-index of the ladder
+
+ladderLoop
+            lda #IMG_LADDER
+            ldx tmp1
+            ldy tmp2
+            jsr drawImg
+            ldx tmp1
+            ldy tmp2
+            inx
+            lda #IMG_LADDER+1
+            jsr drawImg
+
+            ldy tmp2
+            iny
+            sty tmp2
+
+            ldx tmp3
+            inx
+            stx tmp3
+            cpx #06
+            bne ladderLoop
+
+            rts
 
 ; ----------
 ; MAIN
@@ -79,13 +171,23 @@ main
             ; store current animation ptr at $fa-fb
             LOADANIM(anmwalk)
 
+            jsr drawGameScreen
+
+            ; initialise player position
+            lda #04
+            sta px
+            lda #20
+            sta py
+
 mainloop
-            ; draw stuff
+            ; draw player
+            lda #00   ; black color
+            sta color
             ldy anmidx
             lda ($fa),y
             ldx px
             ldy py
-            jsr drawImg
+            jsr drawImg2x2
 
             ; add pause/delay after drawing screen contents
             ldx#$40
@@ -375,6 +477,18 @@ drawImg
 ; --------
             pha
             jsr prepareScreenPtrs
+            pla
+            ldy #$00
+            sta ($fe),y
+            lda color
+            sta ($fc),y
+            rts
+
+; --------
+drawImg2x2
+; --------
+            pha
+            jsr prepareScreenPtrs
 
             ; put character here (preserve old character in pbuff and pcolbuff)
             ldy #$00
@@ -459,6 +573,9 @@ anmthrowup  .byt IMG_THROWDOWN2, IMG_THROWDOWN1, IMG_THROWUP1, IMG_THROWDOWN1
 anmthrowleft .byt IMG_THROWDOWN1, IMG_THROWUP1, IMG_THROWUP2, IMG_THROWUP1
 anmidx      .byt 00
 keyinpause  .byt 00
+tmp1        .byt 00
+tmp2        .byt 00
+tmp3        .byt 00
 
 endCode
 
