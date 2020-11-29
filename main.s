@@ -66,15 +66,18 @@ charsetCopy
             iny
             bne charsetCopy
 
+#define LOADANIM(anim)  \
+  lda #<anim :           \
+  sta $fa    :           \
+  lda #>anim :           \
+  sta $fb
+
 ; ----------
 ; MAIN
 ; ----------
 main
             ; store current animation ptr at $fa-fb
-            lda #<anmwalk
-            sta $fa
-            lda #>anmwalk
-            sta $fb
+            LOADANIM(anmwalk)
 
 mainloop
             ; draw stuff
@@ -105,7 +108,7 @@ m1
             inx
             cpx #$03
             bne changeFrame
-            jsr getJoystickInput
+            jsr actOnJoystickInput
             ldx #$00
 
 changeFrame
@@ -139,11 +142,6 @@ getJoystickInput
             lda pjoy
             ora #PJOY_RIGHT
             sta pjoy
-            ; store current animation ptr at $fa-fb
-            lda #<anmwalk
-            sta $fa
-            lda #>anmwalk
-            sta $fb
 
 checkJoyLeft
             lda #255
@@ -161,11 +159,6 @@ checkJoyLeft
             lda pjoy
             ora #PJOY_LEFT
             sta pjoy
-            ; store current animation ptr at $fa-fb
-            lda #<anmwalk
-            sta $fa
-            lda #>anmwalk
-            sta $fb
 
 checkJoyUp
             lda #$04
@@ -176,11 +169,6 @@ checkJoyUp
             lda pjoy
             ora #PJOY_UP
             sta pjoy
-            ; store current animation ptr at $fa-fb
-            lda #<anmclimb
-            sta $fa
-            lda #>anmclimb
-            sta $fb
 
 checkJoyDown
             lda #$08
@@ -191,42 +179,62 @@ checkJoyDown
             lda pjoy
             ora #PJOY_DOWN
             sta pjoy
-            ; store current animation ptr at $fa-fb
-            lda #<anmclimb
-            sta $fa
-            lda #>anmclimb
-            sta $fb
 
 checkJoyFire
             lda #$20
             bit $ff
             bne endCheck
-            ; check if left is pressed too
+            ; store in joy buffer
             lda pjoy
-            and #PJOY_LEFT
-            beq checkFireAndRight
-            lda #<anmthrowleft
-            sta $fa
-            lda #>anmthrowleft
-            sta $fb
-            jmp endCheck
-checkFireAndRight
-            ;check if right is pressed too
+            ora #PJOY_FIRE
+            sta pjoy
+
+endCheck
+            rts
+
+; --------
+actOnJoystickInput
+; --------
+            jsr getJoystickInput
+
+actCheckFire
+            ; act on fire button?
+            lda pjoy
+            and #PJOY_FIRE
+            beq actCheckLeftOrRight
+
+actCheckFireRight
             lda pjoy
             and #PJOY_RIGHT
-            beq fireOnly
-            lda #<anmthrowright
-            sta $fa
-            lda #>anmthrowright
-            sta $fb
-            jmp endCheck
-fireOnly
-            ;fire only
-            lda #<anmthrowup
-            sta $fa
-            lda #>anmthrowup
-            sta $fb
-endCheck
+            beq actCheckFireLeft
+            LOADANIM(anmthrowright)
+            jmp actEnd
+
+actCheckFireLeft
+            lda pjoy
+            and #PJOY_LEFT
+            beq actFireOnly
+            LOADANIM(anmthrowleft)
+            jmp actEnd
+
+actFireOnly
+            LOADANIM(anmthrowup)
+            jmp actEnd
+
+actCheckLeftOrRight
+            lda pjoy
+            and #(PJOY_LEFT | PJOY_RIGHT)
+            beq actCheckUpOrDown
+            LOADANIM(anmwalk)
+            jmp actEnd
+
+actCheckUpOrDown
+            lda pjoy
+            and #(PJOY_UP | PJOY_DOWN)
+            beq actEnd
+            LOADANIM(anmclimb)
+
+actEnd
             rts
             
             
