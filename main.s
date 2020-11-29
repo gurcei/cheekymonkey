@@ -189,6 +189,7 @@ drawFire
             ldy pfirey
             jsr drawImg
             sta pfirebuf
+            stx pfirecolbuf
 
 dfend
             rts
@@ -229,6 +230,8 @@ m1
             ; clear fire
             lda pfireflag
             beq m3
+            lda pfirecolbuf
+            sta color
             lda pfirebuf
             ldx pfirex
             ldy pfirey
@@ -539,9 +542,13 @@ drawImg
             tax
             pla
             sta ($fe),y
+
+            lda ($fc),y ; preserve colour value written over
+            sta tmp4
             lda color
             sta ($fc),y
-            txa ; return a = value written over
+            txa ; return a = char value written over
+            ldx tmp4  ; return x = colour value written over
             rts
 
 ; --------
@@ -637,11 +644,13 @@ keyinpause  .byt 00
 tmp1        .byt 00
 tmp2        .byt 00
 tmp3        .byt 00
+tmp4        .byt 00
 pfireflag   .byt 00 ; 0 = fire off, 1 = fire left, 2 = fire up, 3 = fire right
 pfirex      .byt 00
 pfirey      .byt 00
 pfiretime   .byt 00 ; how long the fire of the coconut has been active
 pfirebuf    .byt 00 ; what char was written on top of
+pfirecolbuf .byt 00 ; what char colour was written on top of
 
 endCode
 
