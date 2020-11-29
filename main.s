@@ -229,31 +229,57 @@ animateFire
 ; ----------
             ; handle horizontal
             lda pfireflag
+
+            ; fire left?
             cmp #$01
             bne af4
-            dec pfirex
 
+            lda pfirebounce
+            beq afl1
+            inc pfirex
+            jmp af4
+
+afl1
+            dec pfirex
+            lda pfirex ; if x=0, then set bounce flag
+            bne af4
+            lda #$01
+            sta pfirebounce
+
+            ; fire right?
 af4
+            lda pfireflag
             cmp #$03
             bne af5
-            inc pfirex
 
+            lda pfirebounce
+            beq afr1
+            dec pfirex
+            jmp af5
+
+afr1
+            inc pfirex
+            lda pfirex ; if x=21, then set bounce flag
+            cmp #21
+            bne af5
+            lda #$01
+            sta pfirebounce
+
+            ; otherwise fire up
 af5
-            lda #$00
-            sta COLOURRAM
             inc pfiretime
             lda pfiretime
-            sta SCREENRAM
 
             ; handle vertical
             cmp #$06
             bcs af1
+
             dec pfirey
             jmp af2
 af1
             inc pfirey
 af2
-            cmp #$0c
+            cmp #$0d
             bne af3
             lda #$00
             sta pfireflag
@@ -407,6 +433,7 @@ actCheckFire
             beq actCheckLeft
             lda #$00
             sta pfiretime
+            sta pfirebounce
 
 actCheckFireRight
             lda pjoy
@@ -702,6 +729,7 @@ tmp2        .byt 00
 tmp3        .byt 00
 tmp4        .byt 00
 pfireflag   .byt 00 ; 0 = fire off, 1 = fire left, 2 = fire up, 3 = fire right
+pfirebounce .byt 00
 pfirex      .byt 00
 pfirey      .byt 00
 pfiretime   .byt 00 ; how long the fire of the coconut has been active
