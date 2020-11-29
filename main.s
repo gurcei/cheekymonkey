@@ -194,6 +194,36 @@ drawFire
 dfend
             rts
 
+; ---------
+loopDelay
+; ---------
+            ; add pause/delay after drawing screen contents
+            ldx#$40
+m2
+            ldy#$00
+m1
+            dey
+            bne m1
+
+            dex
+            bne m2
+            rts
+
+; ---------
+clearFire
+; ---------
+            ; clear fire
+            lda pfireflag
+            beq m3
+            lda pfirecolbuf
+            sta color
+            lda pfirebuf
+            ldx pfirex
+            ldy pfirey
+            jsr drawImg
+m3
+            rts
+
 ; ----------
 ; MAIN
 ; ----------
@@ -216,28 +246,10 @@ mainloop
             jsr drawPlayer
             jsr drawFire
 
-            ; add pause/delay after drawing screen contents
-            ldx#$40
-m2
-            ldy#$00
-m1
-            dey
-            bne m1
+            jsr loopDelay
 
-            dex
-            bne m2
+            jsr clearFire
 
-            ; clear fire
-            lda pfireflag
-            beq m3
-            lda pfirecolbuf
-            sta color
-            lda pfirebuf
-            ldx pfirex
-            ldy pfirey
-            jsr drawImg
-
-m3
             ; clear player image
             ldx px
             ldy py
