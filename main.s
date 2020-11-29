@@ -137,7 +137,6 @@ getJoystickInput
             lda #128
             bit $9120 ; PortB on VIA#2 (Bit7 = JoyRight)
             bne checkJoyLeft
-            inc px
             ; store in joy buffer
             lda pjoy
             ora #PJOY_RIGHT
@@ -154,7 +153,6 @@ checkJoyLeft
             lda #$10
             bit $ff
             bne checkJoyUp
-            dec px
             ; store in joy buffer
             lda pjoy
             ora #PJOY_LEFT
@@ -164,7 +162,6 @@ checkJoyUp
             lda #$04
             bit $ff
             bne checkJoyDown
-            dec py
             ; store in joy buffer
             lda pjoy
             ora #PJOY_UP
@@ -174,7 +171,6 @@ checkJoyDown
             lda #$08
             bit $ff
             bne checkJoyFire
-            inc py
             ; store in joy buffer
             lda pjoy
             ora #PJOY_DOWN
@@ -201,7 +197,7 @@ actCheckFire
             ; act on fire button?
             lda pjoy
             and #PJOY_FIRE
-            beq actCheckLeftOrRight
+            beq actCheckLeft
 
 actCheckFireRight
             lda pjoy
@@ -221,18 +217,51 @@ actFireOnly
             LOADANIM(anmthrowup)
             jmp actEnd
 
-actCheckLeftOrRight
+actCheckLeft
             lda pjoy
-            and #(PJOY_LEFT | PJOY_RIGHT)
-            beq actCheckUpOrDown
+            and #PJOY_LEFT
+            beq actCheckRight
             LOADANIM(anmwalk)
+            ; move player left (if not at x=0 already)
+            lda px
+            beq actEnd
+            dec px
             jmp actEnd
 
-actCheckUpOrDown
+actCheckRight
             lda pjoy
-            and #(PJOY_UP | PJOY_DOWN)
+            and #PJOY_RIGHT
+            beq actCheckUp
+            LOADANIM(anmwalk)
+            ; move player right (if not at x=20 already)
+            lda px
+            cmp #20
+            beq actEnd
+            inc px
+            jmp actEnd
+
+actCheckUp
+            lda pjoy
+            and #PJOY_UP
+            beq actCheckDown
+            LOADANIM(anmclimb)
+            ; move player up (if not at y=0 already)
+            lda py
+            cmp #0
+            beq actEnd
+            dec py
+            jmp actEnd
+
+actCheckDown
+            lda pjoy
+            and #PJOY_DOWN
             beq actEnd
             LOADANIM(anmclimb)
+            ; move player down (if not at y=21 already)
+            lda py
+            cmp #21
+            beq actEnd
+            inc py
 
 actEnd
             rts
