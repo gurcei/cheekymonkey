@@ -17,6 +17,12 @@ PJOY_FIRE  = $10
 SCREENRAM   = $1E00
 COLOURRAM   = $9600 ; (or $9400 for expanded vic)
 
+SCREENPTR   = $fe
+COLOURPTR   = $fc
+ANIMPTR     = $fa
+MONKEYPTR   = $ee
+
+
 CHROUT   = $FFD2             ; Output character to current output device
 PLOT     = $FFF0             ; Set (clc) or get (sec) cursor position
 
@@ -71,9 +77,9 @@ charsetCopy
 
 #define LOADANIM(anim)  \
   lda #<anim :           \
-  sta $fa    :           \
+  sta ANIMPTR    :           \
   lda #>anim :           \
-  sta $fb
+  sta ANIMPTR+1
 
 drawGameScreen
             ; clear the screen
@@ -166,11 +172,17 @@ ladderLoop
 ; ----------
 drawPlayer
 ; ----------
+            lda #$00
+            sta pctr
+
+dploop
+            ldy pctr
+
             ; draw player
             lda #06   ; blue color
             sta color
             ldy anmidx
-            lda ($fa),y
+            lda (ANIMPTR),y
             ldx px
             ldy py
             jsr drawImg2x2
@@ -287,6 +299,65 @@ af2
 af3
             rts
 
+; ---------
+checkXYhit
+; ---------
+            cpx pfirex
+            bne cxyh1
+
+            cpy pfirey
+            bne cxyh1
+            sec
+            rts
+
+cxyh1
+            clc
+            rts
+
+; ---------
+checkCollision
+; ---------
+            lda pfireflag
+            bne cc0
+            rts
+
+cc0
+            ; check collision between coconut and player
+            ldx px
+            ldy py
+            jsr checkXYhit
+            bcc cc1
+            jmp ccHit
+
+cc1
+            inx
+            jsr checkXYhit
+            bcc cc2
+            jmp ccHit
+
+cc2
+            iny
+            jsr checkXYhit
+            bcc cc3
+            jmp ccHit
+
+cc3
+            dex
+            jsr checkXYhit
+            bcc cc4
+            jmp ccHit
+
+cc4
+            rts
+
+ccHit
+            ; switch to hit-dizzy anim
+            lda #$00
+            sta pfireflag
+            LOADANIM(anmdizzy)
+            rts
+
+
 ; ----------
 ; MAIN
 ; ----------
@@ -333,6 +404,9 @@ mnoFire
 
 changeFrame
             stx keyinpause
+
+            jsr checkCollision
+
             ; change frame
             ldy anmidx
             iny
@@ -561,9 +635,9 @@ prepareScreenPtrs
 
             ; put to zero page at $fe-$ff
             lda loc
-            sta $fe
+            sta SCREENPTR
             lda loc+1
-            sta $ff
+            sta SCREENPTR+1
 
             lda #<COLOURRAM
             sta loc
@@ -573,9 +647,9 @@ prepareScreenPtrs
 
             ; put to zero page at $fc-$fd
             lda loc
-            sta $fc
+            sta COLOURPTR
             lda loc+1
-            sta $fd
+            sta COLOURPTR+1
             rts
 
 ; --------
@@ -586,16 +660,16 @@ clearImg
             ; top-left char
             ldy #$00
             lda pbuff
-            sta ($fe),y
+            sta (SCREENPTR),y
             lda pcolbuff
-            sta ($fc),y
+            sta (COLOURPTR),y
 
             ; top-right char
             iny
             lda pbuff+1
-            sta ($fe),y
+            sta (SCREENPTR),y
             lda pcolbuff+1
-            sta ($fc),y
+            sta (COLOURPTR),y
 
             ; bot-left char
             tya
@@ -603,16 +677,16 @@ clearImg
             adc #21
             tay
             lda pbuff+2
-            sta ($fe),y
+            sta (SCREENPTR),y
             lda pcolbuff+2
-            sta ($fc),y
+            sta (COLOURPTR),y
 
             ; bot-right char
             iny
             lda pbuff+3
-            sta ($fe),y
+            sta (SCREENPTR),y
             lda pcolbuff+3
-            sta ($fc),y
+            sta (COLOURPTR),y
             rts
 
 ; --------
@@ -621,15 +695,15 @@ drawImg
             pha
             jsr prepareScreenPtrs
             ldy #$00
-            lda ($fe),y ; preserve value written over
+            lda (SCREENPTR),y ; preserve value written over
             tax
             pla
-            sta ($fe),y
+            sta (SCREENPTR),y
 
-            lda ($fc),y ; preserve colour value written over
+            lda (COLOURPTR),y ; preserve colour value written over
             sta tmp4
             lda color
-            sta ($fc),y
+            sta (COLOURPTR),y
             txa ; return a = char value written over
             ldx tmp4  ; return x = colour value written over
             rts
@@ -642,15 +716,15 @@ drawImg2x2
 
             ; put character here (preserve old character in pbuff and pcolbuff)
             ldy #$00
-            lda ($fe),y
+            lda (SCREENPTR),y
             sta pbuff
             pla
-            sta ($fe),y
+            sta (SCREENPTR),y
             pha
-            lda ($fc),y
+            lda (COLOURPTR),y
             sta pcolbuff
             lda color
-            sta ($fc),y
+            sta (COLOURPTR),y
             pla
 
             ; draw next char to right
@@ -658,15 +732,15 @@ drawImg2x2
             adc #1
             iny
             pha
-            lda ($fe),y
+            lda (SCREENPTR),y
             sta pbuff+1
             pla
-            sta ($fe),y
+            sta (SCREENPTR),y
             pha
-            lda ($fc),y
+            lda (COLOURPTR),y
             sta pcolbuff+1
             lda color
-            sta ($fc),y
+            sta (COLOURPTR),y
             pla
 
             ; draw in bottom-left
@@ -676,15 +750,15 @@ drawImg2x2
             tya
             adc #$15
             tay
-            lda ($fe),y
+            lda (SCREENPTR),y
             sta pbuff+2
             pla
-            sta ($fe),y
+            sta (SCREENPTR),y
             pha
-            lda ($fc),y
+            lda (COLOURPTR),y
             sta pcolbuff+2
             lda color
-            sta ($fc),y
+            sta (COLOURPTR),y
             pla
 
             ; draw in bottom-right
@@ -692,15 +766,15 @@ drawImg2x2
             adc #1
             iny
             pha
-            lda ($fe),y
+            lda (SCREENPTR),y
             sta pbuff+3
             pla
-            sta ($fe),y
+            sta (SCREENPTR),y
             pha
-            lda ($fc),y
+            lda (COLOURPTR),y
             sta pcolbuff+3
             lda color
-            sta ($fc),y
+            sta (COLOURPTR),y
             pla
             
             rts
@@ -709,11 +783,7 @@ drawImg2x2
 ; DATA
 ;------------
 message     .asc "HELLO, WORLD!" : .byt 0
-px          .byt 04
-py          .byt 04
 pjoy        .byt 00   ; bit0=left, bit1=right, bit2=up, bit3=down, bit4=fire
-pbuff       .byt 00, 00, 00, 00
-pcolbuff    .byt 00, 00, 00, 00
 loc         .word 0000
 color       .byt 00
 anmwalk       .byt IMG_WALK1, IMG_WALK2, IMG_WALK3, IMG_WALK2
@@ -722,19 +792,31 @@ anmthrowright .byt IMG_THROWDOWN3, IMG_THROWDOWN2, IMG_THROWDOWN1, IMG_THROWDOWN
 anmthrowup    .byt IMG_THROWDOWN2, IMG_THROWDOWN1, IMG_THROWUP1, IMG_THROWDOWN1
 anmthrowleft  .byt IMG_THROWDOWN1, IMG_THROWUP1, IMG_THROWUP2, IMG_THROWUP1
 anmcoconut    .byt IMG_COCONUT1, IMG_COCONUT2, IMG_COCONUT3, IMG_COCONUT2
-anmidx      .byt 00
+anmdizzy      .byt IMG_HIT1, IMG_HIT2, IMG_HIT1, IMG_HIT2
+anmidx      .byt 00, 00, 00, 00, 00
 keyinpause  .byt 00
 tmp1        .byt 00
 tmp2        .byt 00
 tmp3        .byt 00
 tmp4        .byt 00
-pfireflag   .byt 00 ; 0 = fire off, 1 = fire left, 2 = fire up, 3 = fire right
-pfirebounce .byt 00
-pfirex      .byt 00
-pfirey      .byt 00
-pfiretime   .byt 00 ; how long the fire of the coconut has been active
-pfirebuf    .byt 00 ; what char was written on top of
-pfirecolbuf .byt 00 ; what char colour was written on top of
+pctr        .byt 00
+
+; --------
+; ARRAY OF MONKEY DATA
+; --------
+pvis        .byt 01, 00, 00, 00, 00, 00   ; visibility flag for all characters
+px          .byt 04, 00, 00, 00, 00, 00
+py          .byt 04, 00, 00, 00, 00, 00
+pcolor      .byt 06, 04, 02, 03, 07, 00
+pbuff       .dsb (4*6), 00
+pcolbuff    .dsb (4*6), 00
+pfireflag   .byt 00, 00, 00, 00, 00 ; 0 = fire off, 1 = fire left, 2 = fire up, 3 = fire right
+pfirebounce .byt 00, 00, 00, 00, 00
+pfirex      .byt 00, 00, 00, 00, 00
+pfirey      .byt 00, 00, 00, 00, 00
+pfiretime   .byt 00, 00, 00, 00, 00 ; how long the fire of the coconut has been active
+pfirebuf    .byt 00, 00, 00, 00, 00 ; what char was written on top of
+pfirecolbuf .byt 00, 00, 00, 00, 00 ; what char colour was written on top of
 
 endCode
 
