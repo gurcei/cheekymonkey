@@ -81,6 +81,15 @@ charsetCopy
   lda #>anim :           \
   sta ANIMPTR+1
 
+#define LOADMONKEY \
+  clc : \
+  lda pctr : \
+  adc #<monkeytable : \
+  sta MONKEYPTR : \
+  lda #>monkeytable : \
+  adc #$00 : \
+  sta MONKEYPTR+1 
+
 drawGameScreen
             ; clear the screen
             lda #147
@@ -176,34 +185,82 @@ drawPlayer
             sta pctr
 
 dploop
-            ldy pctr
+            LOADMONKEY
+
+            ldy #PVIS
+            lda (MONKEYPTR),y
+            beq dpskip
 
             ; draw player
-            lda #06   ; blue color
+            ldy #PCOLOUR
+            lda (MONKEYPTR),y
             sta color
-            ldy anmidx
+            
+            ldy #PANMIDX
+            lda (MONKEYPTR),y
+            tay
             lda (ANIMPTR),y
-            ldx px
-            ldy py
+            pha
+
+            ldy #PX
+            lda (MONKEYPTR),y
+            tax
+
+            ldy #PY
+            lda (MONKEYPTR),y
+            tay
+
+            pla
             jsr drawImg2x2
+
+dpskip
+            inc pctr
+            lda pctr
+            cmp #06
+            bne dploop
+
             rts
 
 ; ----------
 drawFire
 ; ----------
+            lda #$00
+            sta pctr
+
+dfloop
+            LOADMONKEY
+
             ; draw fire
-            lda pfireflag
-            beq dfend
+            ldy #PFIREFLAG
+            lda (MONKEYPTR),y
+            beq dfskip
+
             lda #$00
             sta color ; coconuts are black
-            lda #IMG_COCONUT1
-            ldx pfirex
-            ldy pfirey
-            jsr drawImg
-            sta pfirebuf
-            stx pfirecolbuf
 
-dfend
+            ldy #PFIREX
+            lda (MONKEYPTR),y
+            tax
+
+            ldy #PFIREY
+            lda (MONKEYPTR),y
+            tay
+
+            lda #IMG_COCONUT1
+            jsr drawImg
+
+            ldy #PFIREBUF
+            sta (MONKEYPTR),y
+
+            ldy #PFIRECOLBUF
+            txa
+            sta (MONKEYPTR),y
+
+dfskip
+            inc pctr
+            lda pctr
+            cmp #06
+            bne dfloop
             rts
 
 ; ---------
@@ -224,77 +281,151 @@ m1
 ; ---------
 clearFire
 ; ---------
+            lda #$05
+            sta pctr
+
+cfloop
+            LOADMONKEY
+
             ; clear fire
-            lda pfireflag
-            beq m3
-            lda pfirecolbuf
+            ldy #PFIREFLAG
+            lda (MONKEYPTR),y
+            beq cfskip
+
+            ldy #PFIRECOLBUF
+            lda (MONKEYPTR),y
             sta color
-            lda pfirebuf
-            ldx pfirex
-            ldy pfirey
+
+            ldy #PFIREBUF
+            lda (MONKEYPTR),y
+            pha
+
+            ldy #PFIREX
+            lda (MONKEYPTR),y
+            tax
+
+            ldy #PFIREY
+            lda (MONKEYPTR),y
+            tay
+
+            pla
             jsr drawImg
-m3
+cfskip
+            lda pctr
+            cmp #00
+            beq cfend
+            dec pctr
+            jmp cfloop
+cfend
             rts
 
 ; ----------
 animateFire
 ; ----------
+            lda #$00
+            sta pctr
+
+afloop
+            LOADMONKEY
+
             ; handle horizontal
-            lda pfireflag
+            ldy #PFIREFLAG
+            lda (MONKEYPTR),y
 
             ; fire left?
             cmp #$01
             bne af4
 
-            lda pfirebounce
+            ldy #PFIREBOUNCE
+            lda (MONKEYPTR),y
             beq afl1
-            inc pfirex
+            ldy #PFIREX
+            lda (MONKEYPTR),y
+            clc
+            adc #$01
+            sta (MONKEYPTR),y
             jmp af4
 
 afl1
-            dec pfirex
-            lda pfirex ; if x=0, then set bounce flag
+            ldy #PFIREX
+            lda (MONKEYPTR),y
+            sec
+            sbc #$01
+            sta (MONKEYPTR),y
+            clc
             bne af4
+            ; if x=0, then set bounce flag
             lda #$01
-            sta pfirebounce
+            ldy #PFIREBOUNCE
+            sta (MONKEYPTR),y
 
             ; fire right?
 af4
-            lda pfireflag
+            ldy #PFIREFLAG
+            lda (MONKEYPTR),y
             cmp #$03
             bne af5
 
-            lda pfirebounce
+            ldy #PFIREBOUNCE
+            lda (MONKEYPTR),y
             beq afr1
-            dec pfirex
+
+            ldy #PFIREX
+            lda (MONKEYPTR),y
+            sec
+            sbc #$01
+            sta (MONKEYPTR),y
+            clc
             jmp af5
 
 afr1
-            inc pfirex
-            lda pfirex ; if x=21, then set bounce flag
+            ldy #PFIREX
+            lda (MONKEYPTR),y
+            clc
+            adc #$01
+            sta (MONKEYPTR),y
+            
             cmp #21
             bne af5
+
+            ; if x=21, then set bounce flag
             lda #$01
-            sta pfirebounce
+            ldy #PFIREBOUNCE
+            sta (MONKEYPTR),y
 
             ; otherwise fire up
 af5
-            inc pfiretime
-            lda pfiretime
+            ldy #PFIRETIME
+            lda (MONKEYPTR),y
+            clc
+            adc #$01
+            sta (MONKEYPTR),y
 
             ; handle vertical
             cmp #$06
             bcs af1
 
-            dec pfirey
+            ldy #PFIREY
+            lda (MONKEYPTR),y
+            sec
+            sbc #$01
+            clc
+            sta (MONKEYPTR),y
             jmp af2
 af1
-            inc pfirey
+            ldy #PFIREY
+            lda (MONKEYPTR),y
+            clc
+            adc #$01
+            sta (MONKEYPTR),y
 af2
+            ldy #PFIRETIME
+            lda (MONKEYPTR),y
             cmp #$0d
             bne af3
+            ldy #PFIREFLAG
             lda #$00
-            sta pfireflag
+            sta (MONKEYPTR),y
 
 af3
             rts
@@ -302,10 +433,16 @@ af3
 ; ---------
 checkXYhit
 ; ---------
-            cpx pfirex
+            sty tmp4
+
+            ldy #PFIREX
+            txa
+            cmp (MONKEYPTR),y
             bne cxyh1
 
-            cpy pfirey
+            lda tmp4 ; this holds the y-value initially fed in
+            ldy #PFIREY
+            cmp (MONKEYPTR),y
             bne cxyh1
             sec
             rts
@@ -317,14 +454,19 @@ cxyh1
 ; ---------
 checkCollision
 ; ---------
-            lda pfireflag
+            ldy #PFIREFLAG
+            lda (MONKEYPTR),y
             bne cc0
             rts
 
 cc0
             ; check collision between coconut and player
-            ldx px
-            ldy py
+            ldy #PX
+            lda (MONKEYPTR),y
+            tax
+            ldy #PY
+            lda (MONKEYPTR),y
+            tay
             jsr checkXYhit
             bcc cc1
             jmp ccHit
@@ -793,7 +935,6 @@ anmthrowup    .byt IMG_THROWDOWN2, IMG_THROWDOWN1, IMG_THROWUP1, IMG_THROWDOWN1
 anmthrowleft  .byt IMG_THROWDOWN1, IMG_THROWUP1, IMG_THROWUP2, IMG_THROWUP1
 anmcoconut    .byt IMG_COCONUT1, IMG_COCONUT2, IMG_COCONUT3, IMG_COCONUT2
 anmdizzy      .byt IMG_HIT1, IMG_HIT2, IMG_HIT1, IMG_HIT2
-anmidx      .byt 00, 00, 00, 00, 00
 keyinpause  .byt 00
 tmp1        .byt 00
 tmp2        .byt 00
@@ -804,19 +945,62 @@ pctr        .byt 00
 ; --------
 ; ARRAY OF MONKEY DATA
 ; --------
-pvis        .byt 01, 00, 00, 00, 00, 00   ; visibility flag for all characters
-px          .byt 04, 00, 00, 00, 00, 00
-py          .byt 04, 00, 00, 00, 00, 00
-pcolor      .byt 06, 04, 02, 03, 07, 00
-pbuff       .dsb (4*6), 00
-pcolbuff    .dsb (4*6), 00
-pfireflag   .byt 00, 00, 00, 00, 00 ; 0 = fire off, 1 = fire left, 2 = fire up, 3 = fire right
-pfirebounce .byt 00, 00, 00, 00, 00
-pfirex      .byt 00, 00, 00, 00, 00
-pfirey      .byt 00, 00, 00, 00, 00
-pfiretime   .byt 00, 00, 00, 00, 00 ; how long the fire of the coconut has been active
-pfirebuf    .byt 00, 00, 00, 00, 00 ; what char was written on top of
-pfirecolbuf .byt 00, 00, 00, 00, 00 ; what char colour was written on top of
+#define MONKEYDATA \
+.(: \
+/*pvis*/        .byt 01 : \
+/*px*/          .byt 00 : \
+/*py*/          .byt 00 : \
+/*pcolour*/     .byt 00 : \
+/*pbuff*/       .dsb 4, 00 : \
+/*pcolbuff*/    .dsb 4, 00 : \
+/*pfireflag*/   .byt 00 : \
+/*pfirebounce*/ .byt 00 : \
+/*pfirex*/      .byt 00 : \
+/*pfirey*/      .byt 00 : \
+/*pfiretime*/   .byt 00 : \
+/*pfirebuf*/    .byt 00 : \
+/*pfirecolbuf*/ .byt 00 : \
+/*panmidx*/     .byt 00 : \
+/*pfanmidx*/    .byt 00 :.)
+
+PVIS = 0 ; visibility flag for all characters
+PX = 1
+PY = 2
+PCOLOUR = 3
+PBUFF = 4
+PCOLBUFF = 8
+PFIREFLAG = 12 ; 0 = fire off, 1 = fire left, 2 = fire up, 3 = fire right
+PFIREBOUNCE = 13
+PFIREX = 14
+PFIREY = 15
+PFIRETIME = 16 ; how long the fire of the coconut has been active
+PFIREBUF = 17 ; what char was written on top of
+PFIRECOLBUF = 18 ; what char colour was written on top of
+PANMIDX = 19 ; player animation index
+PFANMIDX = 20 ; player fire (coconut) index
+
+
+; Gimme 6 monkeys!
+monkey0
+MONKEYDATA
+monkey1
+MONKEYDATA
+monkey2
+MONKEYDATA
+monkey3
+MONKEYDATA
+monkey4
+MONKEYDATA
+monkey5
+MONKEYDATA
+
+monkeytable
+  .word monkey0
+  .word monkey1
+  .word monkey2
+  .word monkey3
+  .word monkey4
+  .word monkey5
 
 endCode
 
