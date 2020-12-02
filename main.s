@@ -331,8 +331,10 @@ afloop
             ; clear fire
             ldy #PFIREFLAG
             lda (MONKEYPTR),y
-            beq afskip
+            bne afcont
+            jmp afskip
 
+afcont
             ; handle horizontal
             ldy #PFIREFLAG
             lda (MONKEYPTR),y
@@ -443,7 +445,30 @@ afend
             rts
 
 ; ---------
-checkXYhit
+checkAllCoconutHits
+; ---------
+            lda #$00
+            sta cctr
+
+            stx cachx
+            sty cachy
+
+cachloop
+            LOADMONKEY
+            jsr checkCoconutHit
+
+            ldx cachx
+            ldy cachy
+
+cachskip
+            inc cctr
+            lda cctr
+            cmp #06
+            bne cachloop
+            rts
+
+; ---------
+checkCoconutHit
 ; ---------
             sty tmp4
 
@@ -464,6 +489,54 @@ cxyh1
             rts
 
 ; ---------
+checkAllCollisions
+; ---------
+            lda #$00
+            sta pctr
+
+cacloop
+            LOADMONKEY
+
+            jsr checkCollision
+
+cacskip
+            inc pctr
+            lda pctr
+            cmp #06
+            bne cacloop
+            rts
+
+
+; ----------
+changeFrames
+; ----------
+            lda #$00
+            sta pctr
+
+chgfloop
+            ; change frame
+            ldy #PANMIDX
+            lda (MONKEYPTR),y
+            clc
+            adc #$01
+            sta (MONKEYPTR),y
+            cmp #$04
+            bne chgfskip
+
+            lda #$00
+            ldy #PANMIDX
+            sta (MONKEYPTR),y
+
+chgfskip
+            inc pctr
+            lda pctr
+            cmp #06
+            bne chgfloop
+
+chgfend
+            rts
+
+; ---------
 checkCollision
 ; ---------
             ldy #PFIREFLAG
@@ -479,25 +552,25 @@ cc0
             ldy #PY
             lda (MONKEYPTR),y
             tay
-            jsr checkXYhit
+            jsr checkAllCoconutHits
             bcc cc1
             jmp ccHit
 
 cc1
             inx
-            jsr checkXYhit
+            jsr checkAllCoconutHits
             bcc cc2
             jmp ccHit
 
 cc2
             iny
-            jsr checkXYhit
+            jsr checkAllCoconutHits
             bcc cc3
             jmp ccHit
 
 cc3
             dex
-            jsr checkXYhit
+            jsr checkAllCoconutHits
             bcc cc4
             jmp ccHit
 
@@ -591,23 +664,17 @@ mainloop
             ldx keyinpause
             inx
             cpx #$03
-            bne changeFrame
+            bne skipJoy
             jsr actOnJoystickInput
             ldx #$00
 
-changeFrame
+skipJoy
             stx keyinpause
 
-            jsr checkCollision
+            jsr checkAllCollisions
 
-            ; change frame
-            ldy anmidx
-            iny
-            sty anmidx
-            cpy #$04
-            bne mainloop
-            ldy #$00
-            sty anmidx
+            jsr changeFrames
+
             jmp mainloop
             rts
 
@@ -678,14 +745,27 @@ endCheck
 ; -------
 initPlayerFire
 ; -------
-            ldx px
+; NOTE - Currently hardcoded for player 1 in caller (in future, would like this to support player2 via keyboard)
+
+            ldy #PX
+            lda (MONKEYPTR),y
+            tax
             inx
-            stx pfirex
-            ldy py
+            txa
+            ldy #PFIREX
+            sta (MONKEYPTR),y
+
+            ldy #PFIREY
+            lda (MONKEYPTR),y
+            tay
             dey
-            sty pfirey
+            tya
+            ldy #PFIREY
+            sta (MONKEYPTR),y
+
             lda #$00
-            lda pfiretime
+            ldy #PFIRETIME
+            sta (MONKEYPTR),y
             rts
 
 ; --------
@@ -693,14 +773,21 @@ actOnJoystickInput
 ; --------
             jsr getJoystickInput
 
+; NOTE - again, this is hardcoded to be just for player1 (try get it to work for keyboard player 2 in future)
+            lda #$00
+            sta pctr
+            LOADMONKEY
+
 actCheckFire
             ; act on fire button?
             lda pjoy
             and #PJOY_FIRE
             beq actCheckLeft
             lda #$00
-            sta pfiretime
-            sta pfirebounce
+            ldy #PFIRETIME
+            sta (MONKEYPTR),y
+            ldy #PFIREBOUNCE
+            sta (MONKEYPTR),y
 
 actCheckFireRight
             lda pjoy
@@ -708,7 +795,8 @@ actCheckFireRight
             beq actCheckFireLeft
             LOADANIM(anmthrowright)
             lda #$03
-            sta pfireflag
+            ldy #PFIREFLAG
+            sta (MONKEYPTR),y
             jsr initPlayerFire
             jmp actEnd
 
@@ -718,14 +806,16 @@ actCheckFireLeft
             beq actFireOnly
             LOADANIM(anmthrowleft)
             lda #$01
-            sta pfireflag
+            ldy #PFIREFLAG
+            sta (MONKEYPTR),y
             jsr initPlayerFire
             jmp actEnd
 
 actFireOnly
             LOADANIM(anmthrowup)
             lda #$02
-            sta pfireflag
+            ldy #PFIREFLAG
+            sta (MONKEYPTR),y
             jsr initPlayerFire
             jmp actEnd
 
@@ -735,9 +825,14 @@ actCheckLeft
             beq actCheckRight
             LOADANIM(anmwalk)
             ; move player left (if not at x=0 already)
-            lda px
+            ldy #PX
+            lda (MONKEYPTR),y
             beq actEnd
-            dec px
+            lda (MONKEYPTR),y
+            tax
+            dex
+            txa
+            sta (MONKEYPTR),y
             jmp actEnd
 
 actCheckRight
@@ -746,10 +841,15 @@ actCheckRight
             beq actCheckUp
             LOADANIM(anmwalk)
             ; move player right (if not at x=20 already)
-            lda px
+            ldy #PX
+            lda (MONKEYPTR),y
             cmp #20
             beq actEnd
-            inc px
+            lda (MONKEYPTR),y
+            tax
+            inx
+            txa
+            sta (MONKEYPTR),y
             jmp actEnd
 
 actCheckUp
@@ -758,10 +858,15 @@ actCheckUp
             beq actCheckDown
             LOADANIM(anmclimb)
             ; move player up (if not at y=0 already)
-            lda py
+            ldy #PY
+            lda (MONKEYPTR),y
             cmp #0
             beq actEnd
-            dec py
+            lda (MONKEYPTR),y
+            tax
+            dex
+            txa
+            sta (MONKEYPTR),y
             jmp actEnd
 
 actCheckDown
@@ -770,10 +875,15 @@ actCheckDown
             beq actEnd
             LOADANIM(anmclimb)
             ; move player down (if not at y=21 already)
-            lda py
+            ldy #PY
+            lda (MONKEYPTR),y
             cmp #21
             beq actEnd
-            inc py
+            lda (MONKEYPTR),y
+            tax
+            inx
+            txa
+            sta (MONKEYPTR),y
 
 actEnd
             rts
@@ -851,17 +961,25 @@ clearImg2x2
             jsr prepareScreenPtrs
 
             ; top-left char
+            ldy #PBUFF
+            lda (MONKEYPTR),y
             ldy #$00
-            lda pbuff
             sta (SCREENPTR),y
-            lda pcolbuff
+
+            ldy #PCOLBUFF
+            lda (MONKEYPTR),y
+            ldy #$00
             sta (COLOURPTR),y
 
             ; top-right char
-            iny
-            lda pbuff+1
+            ldy #(PBUFF+1)
+            lda (MONKEYPTR),y
+            ldy #$01
             sta (SCREENPTR),y
-            lda pcolbuff+1
+
+            ldy #(PCOLBUFF+1)
+            lda (MONKEYPTR),y
+            ldy #$01
             sta (COLOURPTR),y
 
             ; bot-left char
@@ -869,16 +987,29 @@ clearImg2x2
             clc
             adc #21
             tay
-            lda pbuff+2
+            sty cimgy ; buffer this somewhere, so we don't lose it
+
+            ldy #(PBUFF+2)
+            lda (MONKEYPTR),y
+            ldy cimgy
             sta (SCREENPTR),y
-            lda pcolbuff+2
+            ldy #(PCOLBUFF+2)
+            lda (MONKEYPTR),y
+            ldy cimgy
             sta (COLOURPTR),y
 
             ; bot-right char
             iny
-            lda pbuff+3
+            sty cimgy
+
+            ldy #(PBUFF+3)
+            lda (MONKEYPTR),y
+            ldy cimgy
             sta (SCREENPTR),y
-            lda pcolbuff+3
+
+            ldy #(PCOLBUFF+3)
+            lda (MONKEYPTR),y
+            ldy cimgy
             sta (COLOURPTR),y
             rts
 
@@ -904,71 +1035,103 @@ drawImg
 ; --------
 drawImg2x2
 ; --------
-            pha
+            sta drwa
             jsr prepareScreenPtrs
 
             ; put character here (preserve old character in pbuff and pcolbuff)
             ldy #$00
+            sty cimgy
+
             lda (SCREENPTR),y
-            sta pbuff
-            pla
+            ldy #(PBUFF)
+            sta (MONKEYPTR),y
+
+            lda drwa
+            ldy cimgy
             sta (SCREENPTR),y
-            pha
+
             lda (COLOURPTR),y
-            sta pcolbuff
+            ldy #PCOLBUFF
+            sta (MONKEYPTR),y
+
             lda color
+            ldy cimgy
             sta (COLOURPTR),y
-            pla
 
             ; draw next char to right
             clc
+            lda drwa
             adc #1
+            sta drwa
+
             iny
-            pha
+            sty cimgy
+
             lda (SCREENPTR),y
-            sta pbuff+1
-            pla
+            ldy #(PBUFF+1)
+            sta (MONKEYPTR),y
+
+            lda drwa
+            ldy cimgy
             sta (SCREENPTR),y
-            pha
+
             lda (COLOURPTR),y
-            sta pcolbuff+1
+            ldy #(PCOLBUFF+1)
+            sta (MONKEYPTR),y
+
             lda color
+            ldy cimgy
             sta (COLOURPTR),y
-            pla
 
             ; draw in bottom-left
             clc
+            lda drwa
             adc #1
-            pha
+            sta drwa
+
             tya
             adc #$15
             tay
+            sty cimgy
+
             lda (SCREENPTR),y
-            sta pbuff+2
-            pla
+            ldy #(PBUFF+2)
+            sta (MONKEYPTR),y
+
+            lda drwa
+            ldy cimgy
             sta (SCREENPTR),y
-            pha
             lda (COLOURPTR),y
-            sta pcolbuff+2
+            ldy #(PCOLBUFF+2)
+            sta (MONKEYPTR),y
             lda color
+            ldy cimgy
             sta (COLOURPTR),y
-            pla
 
             ; draw in bottom-right
+            lda drwa
             clc
             adc #1
+            sta drwa
+
             iny
-            pha
+            sta cimgy
+
             lda (SCREENPTR),y
-            sta pbuff+3
-            pla
+            ldy #(PBUFF+3)
+            sta (MONKEYPTR),y
+
+            lda drwa
+            ldy cimgy
             sta (SCREENPTR),y
-            pha
+
             lda (COLOURPTR),y
-            sta pcolbuff+3
+            ldy #(PCOLBUFF+3)
+            sta (MONKEYPTR),y
+
             lda color
+            ldy cimgy
             sta (COLOURPTR),y
-            pla
             
             rts
 
@@ -992,6 +1155,11 @@ tmp2        .byt 00
 tmp3        .byt 00
 tmp4        .byt 00
 pctr        .byt 00
+cctr        .byt 00
+cachx       .byt 00
+cachy       .byt 00
+cimgy       .byt 00
+drwa        .byt 00
 
 ; --------
 ; ARRAY OF MONKEY DATA
