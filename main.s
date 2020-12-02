@@ -179,7 +179,7 @@ ladderLoop
             rts
 
 ; ----------
-drawPlayer
+drawMonkeys
 ; ----------
             lda #$00
             sta pctr
@@ -222,7 +222,7 @@ dpskip
             rts
 
 ; ----------
-drawFire
+drawCoconuts
 ; ----------
             lda #$00
             sta pctr
@@ -279,7 +279,7 @@ m1
             rts
 
 ; ---------
-clearFire
+clearCoconuts
 ; ---------
             lda #$05
             sta pctr
@@ -320,13 +320,18 @@ cfend
             rts
 
 ; ----------
-animateFire
+animateCoconuts
 ; ----------
             lda #$00
             sta pctr
 
 afloop
             LOADMONKEY
+
+            ; clear fire
+            ldy #PFIREFLAG
+            lda (MONKEYPTR),y
+            beq afskip
 
             ; handle horizontal
             ldy #PFIREFLAG
@@ -428,6 +433,13 @@ af2
             sta (MONKEYPTR),y
 
 af3
+afskip
+            lda pctr
+            cmp #00
+            beq afend
+            dec pctr
+            jmp afloop
+afend
             rts
 
 ; ---------
@@ -495,8 +507,44 @@ cc4
 ccHit
             ; switch to hit-dizzy anim
             lda #$00
-            sta pfireflag
+            ldy #PFIREFLAG
+            sta (MONKEYPTR),y
             LOADANIM(anmdizzy)
+            rts
+
+
+; ----------
+clearMonkeys
+; ----------
+            lda #$05
+            sta pctr
+
+cmloop
+            LOADMONKEY
+
+            ; check for monkey visibility first
+            ldy #PVIS
+            lda (MONKEYPTR),y
+            beq cmskip
+
+            ; clear player image
+            ldy #PX
+            lda (MONKEYPTR),y
+            tax
+
+            ldy #PY
+            lda (MONKEYPTR),y
+            tay
+
+            jsr clearImg2x2
+
+cmskip
+            lda pctr
+            cmp #00
+            beq cmend
+            dec pctr
+            jmp cmloop
+cmend
             rts
 
 
@@ -510,31 +558,34 @@ main
             jsr drawGameScreen
 
             ; initialise player position
+            lda #$00
+            sta pctr
+
             lda #04
-            sta px
+            ldy #PX
+            sta (MONKEYPTR),y
             lda #20
-            sta py
+            ldy #PY
+            sta (MONKEYPTR),y
             
             lda #$00
-            sta pfireflag
+            ldy #PFIREFLAG
+            sta (MONKEYPTR),y
+
+            lda #$01
+            ldy #PVIS
+            sta (MONKEYPTR),y
 
 mainloop
-            jsr drawPlayer
-            jsr drawFire
+            jsr drawMonkeys
+            jsr drawCoconuts
 
             jsr loopDelay
 
-            lda pfireflag
-            beq mnoFire
+            jsr clearCoconuts
+            jsr animateCoconuts
 
-            jsr clearFire
-            jsr animateFire
-
-mnoFire
-            ; clear player image
-            ldx px
-            ldy py
-            jsr clearImg
+            jsr clearMonkeys
 
             ; get keyboard input
             ldx keyinpause
@@ -795,7 +846,7 @@ prepareScreenPtrs
             rts
 
 ; --------
-clearImg
+clearImg2x2
 ; --------
             jsr prepareScreenPtrs
 
