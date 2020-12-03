@@ -832,6 +832,13 @@ actCheckFire
             lda pjoy
             and #PJOY_FIRE
             beq actCheckLeft
+
+            ; assure that monkey's coconut isn't already thrown yet
+            ldy #PFIREFLAG
+            lda (MONKEYPTR),y
+            bne actCheckLeft
+
+            ; initialise a few coconut vars in preparation
             lda #$00
             ldy #PFIRETIME
             sta (MONKEYPTR),y
