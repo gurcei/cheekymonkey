@@ -21,6 +21,7 @@ SCREENPTR   = $fe
 COLOURPTR   = $fc
 ANIMPTR     = $fa
 MONKEYPTR   = $ee
+MONKEYTBLPTR= $ec
 
 
 CHROUT   = $FFD2             ; Output character to current output device
@@ -72,7 +73,7 @@ charsetCopy
             sta $1900,y
             iny
             bne charsetCopy
-
+            
             jmp main
 
 #define LOADANIM(anim)  \
@@ -82,13 +83,16 @@ charsetCopy
   sta ANIMPTR+1
 
 #define LOADMONKEY \
-  clc : \
+  clc : tya : pha : \
   lda pctr : \
-  adc #<monkeytable : \
+  asl : \
+  tay : \
+  lda (MONKEYTBLPTR),y : \
   sta MONKEYPTR : \
-  lda #>monkeytable : \
-  adc #$00 : \
-  sta MONKEYPTR+1 
+  iny : \
+  lda (MONKEYTBLPTR),y : \
+  sta MONKEYPTR+1  : \
+  pla : tay
 
 drawGameScreen
             ; clear the screen
@@ -630,9 +634,15 @@ main
 
             jsr drawGameScreen
 
+            lda #<monkeytable
+            sta MONKEYTBLPTR
+            lda #>monkeytable
+            sta MONKEYTBLPTR+1 
+
             ; initialise player position
             lda #$00
             sta pctr
+            LOADMONKEY
 
             lda #04
             ldy #PX
@@ -1109,13 +1119,13 @@ drawImg2x2
             sta (COLOURPTR),y
 
             ; draw in bottom-right
-            lda drwa
             clc
+            lda drwa
             adc #1
             sta drwa
 
             iny
-            sta cimgy
+            sty cimgy
 
             lda (SCREENPTR),y
             ldy #(PBUFF+3)
