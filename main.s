@@ -20,8 +20,9 @@ COLOURRAM   = $9600 ; (or $9400 for expanded vic)
 SCREENPTR   = $fe
 COLOURPTR   = $fc
 ANIMPTR     = $fa
-MONKEYPTR   = $ee
-MONKEYTBLPTR= $ec
+MONKEYPTR   = $f8   ; pointer to the current monkey
+MONKEYTBLPTR= $f6   ; pointer to the monkey table
+CMONKEYPTR  = $f4   ; pointer to the current coconut of interest to test for collision against current monkey
 
 
 CHROUT   = $FFD2             ; Output character to current output device
@@ -92,6 +93,18 @@ charsetCopy
   iny : \
   lda (MONKEYTBLPTR),y : \
   sta MONKEYPTR+1  : \
+  pla : tay
+
+#define LOADCMONKEY \
+  clc : tya : pha : \
+  lda cctr : \
+  asl : \
+  tay : \
+  lda (MONKEYTBLPTR),y : \
+  sta CMONKEYPTR : \
+  iny : \
+  lda (MONKEYTBLPTR),y : \
+  sta CMONKEYPTR+1  : \
   pla : tay
 
 drawGameScreen
@@ -458,17 +471,28 @@ checkAllCoconutHits
             sty cachy
 
 cachloop
-            LOADMONKEY
-            jsr checkCoconutHit
+            LOADCMONKEY
+
+            ldy #PFIREFLAG
+            lda (CMONKEYPTR),y
+
+            beq cachskip
 
             ldx cachx
             ldy cachy
+
+            jsr checkCoconutHit
+            bcc cachskip
+
+            ; if we found a hit (carry set), then exit early
+            rts
 
 cachskip
             inc cctr
             lda cctr
             cmp #06
             bne cachloop
+            clc
             rts
 
 ; ---------
@@ -478,13 +502,18 @@ checkCoconutHit
 
             ldy #PFIREX
             txa
-            cmp (MONKEYPTR),y
+            cmp (CMONKEYPTR),y
             bne cxyh1
 
             lda tmp4 ; this holds the y-value initially fed in
             ldy #PFIREY
-            cmp (MONKEYPTR),y
+            cmp (CMONKEYPTR),y
             bne cxyh1
+
+            ; we got a hit, so hide this coconut
+            lda #$00
+            ldy #PFIREFLAG
+            sta (CMONKEYPTR),y
             sec
             rts
 
@@ -543,37 +572,47 @@ chgfend
 ; ---------
 checkCollision
 ; ---------
-            ldy #PFIREFLAG
+            ldy #PVIS
             lda (MONKEYPTR),y
             bne cc0
             rts
 
 cc0
-            ; check collision between coconut and player
+            ; check collision between all coconuts and this player
             ldy #PX
             lda (MONKEYPTR),y
             tax
+            stx ccx
+
             ldy #PY
             lda (MONKEYPTR),y
             tay
+            sty ccy
+
             jsr checkAllCoconutHits
             bcc cc1
             jmp ccHit
 
 cc1
-            inx
+            inc ccx
+            ldx ccx
+            ldy ccy
             jsr checkAllCoconutHits
             bcc cc2
             jmp ccHit
 
 cc2
-            iny
+            inc ccy
+            ldx ccx
+            ldy ccy
             jsr checkAllCoconutHits
             bcc cc3
             jmp ccHit
 
 cc3
-            dex
+            dec ccx
+            ldx ccx
+            ldy ccy
             jsr checkAllCoconutHits
             bcc cc4
             jmp ccHit
@@ -765,7 +804,7 @@ initPlayerFire
             ldy #PFIREX
             sta (MONKEYPTR),y
 
-            ldy #PFIREY
+            ldy #PY
             lda (MONKEYPTR),y
             tay
             dey
@@ -1170,6 +1209,8 @@ cachx       .byt 00
 cachy       .byt 00
 cimgy       .byt 00
 drwa        .byt 00
+ccx         .byt 00
+ccy         .byt 00
 
 ; --------
 ; ARRAY OF MONKEY DATA
