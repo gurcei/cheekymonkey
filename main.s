@@ -350,11 +350,11 @@ cfloop
             lda (MONKEYPTR),y
             pha
 
-            ldy #PFIREX
+            ldy #POLDFIREX
             lda (MONKEYPTR),y
             tax
 
-            ldy #PFIREY
+            ldy #POLDFIREY
             lda (MONKEYPTR),y
             tay
 
@@ -385,6 +385,17 @@ afloop
             jmp afskip
 
 afcont
+            ; preserve old location
+            ldy #PFIREX
+            lda (MONKEYPTR),y
+            ldy #POLDFIREX
+            sta (MONKEYPTR),y
+
+            ldy #PFIREY
+            lda (MONKEYPTR),y
+            ldy #POLDFIREY
+            sta (MONKEYPTR),y            
+            
             ; handle horizontal
             ldy #PFIREFLAG
             lda (MONKEYPTR),y
@@ -679,11 +690,11 @@ cmloop
             beq cmskip
 
             ; clear player image
-            ldy #PX
+            ldy #POLDX
             lda (MONKEYPTR),y
             tax
 
-            ldy #PY
+            ldy #POLDY
             lda (MONKEYPTR),y
             tay
 
@@ -745,6 +756,36 @@ imend
 
 
 ; ----------
+animateMonkeys
+; ----------
+            lda #$00
+            sta pctr
+            LOADMONKEY
+
+            ; preserve old monkey position (for clearing frame from screen later)
+            ldy #PX
+            lda (MONKEYPTR),y
+            ldy #POLDX
+            sta (MONKEYPTR),y
+            
+            ldy #PY
+            lda (MONKEYPTR),y
+            ldy #POLDY
+            sta (MONKEYPTR),y
+            
+            ; get keyboard input
+            ldx keyinpause
+            inx
+            cpx #$03
+            bne skipJoy
+            jsr actOnJoystickInput
+            ldx #$00
+
+skipJoy
+            stx keyinpause
+            rts
+
+; ----------
 ; MAIN
 ; ----------
 main
@@ -761,25 +802,15 @@ mainloop
 
             jsr loopDelay
 
-            jsr clearCoconuts
             jsr animateCoconuts
-
-            jsr clearMonkeys
-
-            ; get keyboard input
-            ldx keyinpause
-            inx
-            cpx #$03
-            bne skipJoy
-            jsr actOnJoystickInput
-            ldx #$00
-
-skipJoy
-            stx keyinpause
+            jsr animateMonkeys
 
             jsr checkAllCollisions
 
             jsr changeFrames
+
+            jsr clearCoconuts
+            jsr clearMonkeys
 
             jmp mainloop
             rts
@@ -1296,7 +1327,11 @@ ccy         .byt 00
 /*pfirecolbuf*/ .byt 00 : \
 /*panmidx*/     .byt 00 : \
 /*pfanmidx*/    .byt 00 : \
-/*panimptr*/    .byt 00, 00 :.)
+/*panimptr*/    .byt 00, 00 : \
+/*poldfirex*/   .byt 00 : \
+/*poldfirey*/   .byt 00 : \
+/*poldx*/       .byt x : \
+/*poldy*/       .byt y :.)
 
 PVIS = 0 ; visibility flag for all characters
 PX = 1
@@ -1315,6 +1350,10 @@ PANMIDX = 19 ; player animation index
 PFANMIDX = 20 ; player fire (coconut) index
 PANIMPTRLO = 21
 PANIMPTRHI = 22
+POLDFIREX = 23
+POLDFIREY = 24
+POLDX = 25
+POLDY = 26
 
 
 ; Gimme 6 monkeys!
@@ -1339,6 +1378,9 @@ monkeytable
   .word monkey4
   .word monkey5
 
+MONKEYDATA_SIZE = monkeytable - monkey0
+#print MONKEYDATA_SIZE
+
 endCode
 
             ; fill to charset
@@ -1355,7 +1397,11 @@ FREE_BYTES = $1800 - endCode
 ;------------
 ; CHARSET
 ;------------
+startCharset
             ; add my unique characters here
             ; currently 464 bytes long (58 chars)
             ; mem range is 1a00 (6656) to 1fd0 (7120)
 #include "charset.s"
+endCharset
+CHARSET_SIZE = endCharset - startCharset
+#print CHARSET_SIZE
