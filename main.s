@@ -727,22 +727,62 @@ imloop
             
             LOADANIM(anmwalk)
 
+            inc pctr
             lda pctr
             cmp #06
-            beq imend
-            inc pctr
-            jmp imloop
+            bne imloop
+
 imend
             rts
 
+; ----------
+moveEnemyMonkey
+; ----------
+            ldy #PMVT
+            lda (MONKEYPTR),y
+            cmp #$02
+            bcs mem23
+
+mem01       ; move to left
+            ldy #PX
+            lda (MONKEYPTR),y
+            tax
+            dex
+            txa
+            sta (MONKEYPTR),y
+            jmp memincmvt
+            
+mem23       ; move to right
+            ldy #PX
+            lda (MONKEYPTR),y
+            tax
+            inx
+            txa
+            sta (MONKEYPTR),y
+            
+memincmvt
+            ; now increment mvt timer
+            ldy #PMVT
+            lda (MONKEYPTR),y
+            tax
+            inx
+            cpx #$04
+            bne memskipreset
+            ldx #$00
+            
+memskipreset
+            txa
+            sta (MONKEYPTR),y
+            rts
 
 ; ----------
 animateMonkeys
 ; ----------
             lda #$00
             sta pctr
-            LOADMONKEY
 
+anmmloop
+            LOADMONKEY
             ; preserve old monkey position (for clearing frame from screen later)
             ldy #PX
             lda (MONKEYPTR),y
@@ -754,6 +794,36 @@ animateMonkeys
             ldy #POLDY
             sta (MONKEYPTR),y
             
+            lda pctr
+            beq anmmskip
+
+            ; don't move enemy if pause-time not reached yet
+            ldx keyinpause
+            cpx #$02
+            bne anmmskip
+            
+            ; don't move enemy if he's dizzy
+            ldy #PANIMPTRLO
+            lda (MONKEYPTR),y
+            cmp #<anmdizzy
+            bne anmmmove
+            
+            ldy #PANIMPTRHI
+            lda (MONKEYPTR),y
+            cmp #>anmdizzy
+            beq anmmskip
+
+anmmmove
+            ; move individual enemy monkeys
+            jsr moveEnemyMonkey
+            
+anmmskip
+            inc pctr
+            lda pctr
+            cmp #06
+            bne anmmloop
+            
+anmmp1input
             ; get keyboard input
             ldx keyinpause
             inx
@@ -1302,7 +1372,7 @@ ccy         .byt 00
 ; --------
 ; ARRAY OF MONKEY DATA
 ; --------
-#define MONKEYDATA(x,y,col) \
+#define MONKEYDATA(x,y,col,mvt) \
 .(: \
 /*pvis*/        .byt 01 : \
 /*px*/          .byt x : \
@@ -1321,7 +1391,8 @@ ccy         .byt 00
 /*pfanmidx*/    .byt 00 : \
 /*panimptr*/    .byt 00, 00 : \
 /*poldx*/       .byt x : \
-/*poldy*/       .byt y :.)
+/*poldy*/       .byt y : \
+/*pmvt*/        .byt mvt :.)
 
 PVIS = 0 ; visibility flag for all characters
 PX = 1
@@ -1342,21 +1413,22 @@ PANIMPTRLO = 21
 PANIMPTRHI = 22
 POLDX = 23
 POLDY = 24
+PMVT = 25 ; this is a movement timer (0,1 are moves to the left, 2,3 are moves to the right, and then it cycles)
 
 
 ; Gimme 6 monkeys!
 monkey0
-MONKEYDATA(4,20,6)
+MONKEYDATA(4,20,6,0)
 monkey1
-MONKEYDATA(4,13,2)
+MONKEYDATA(4,13,2,1)
 monkey2
-MONKEYDATA(18,13,7)
+MONKEYDATA(18,13,5,2)
 monkey3
-MONKEYDATA(2,6,3)
+MONKEYDATA(2,6,3,3)
 monkey4
-MONKEYDATA(10,6,4)
+MONKEYDATA(10,6,4,2)
 monkey5
-MONKEYDATA(17,6,5)
+MONKEYDATA(17,6,7,1)
 
 monkeytable
   .word monkey0
