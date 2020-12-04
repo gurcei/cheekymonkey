@@ -930,6 +930,17 @@ actCheckFireRight
             lda #$03
             ldy #PFIREFLAG
             sta (MONKEYPTR),y
+            
+            ; check for right-most position gotchya
+            ldy #PX
+            lda (MONKEYPTR),y
+            cmp #20
+            bne acfri1
+            ; force it to bounce from the get-go
+            lda #$01
+            ldy #PFIREBOUNCE
+            sta (MONKEYPTR),y
+acfri1
             jsr initPlayerFire
             jmp actEnd
 
