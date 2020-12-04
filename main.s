@@ -1222,12 +1222,12 @@ ccy         .byt 00
 ; --------
 ; ARRAY OF MONKEY DATA
 ; --------
-#define MONKEYDATA \
+#define MONKEYDATA(x,y,col) \
 .(: \
 /*pvis*/        .byt 01 : \
-/*px*/          .byt 00 : \
-/*py*/          .byt 00 : \
-/*pcolour*/     .byt 00 : \
+/*px*/          .byt x : \
+/*py*/          .byt y : \
+/*pcolour*/     .byt col : \
 /*pbuff*/       .dsb 4, 00 : \
 /*pcolbuff*/    .dsb 4, 00 : \
 /*pfireflag*/   .byt 00 : \
@@ -1259,17 +1259,17 @@ PFANMIDX = 20 ; player fire (coconut) index
 
 ; Gimme 6 monkeys!
 monkey0
-MONKEYDATA
+MONKEYDATA(4,20,6)
 monkey1
-MONKEYDATA
+MONKEYDATA(4,13,2)
 monkey2
-MONKEYDATA
+MONKEYDATA(18,13,7)
 monkey3
-MONKEYDATA
+MONKEYDATA(2,6,3)
 monkey4
-MONKEYDATA
+MONKEYDATA(10,6,4)
 monkey5
-MONKEYDATA
+MONKEYDATA(17,6,5)
 
 monkeytable
   .word monkey0
