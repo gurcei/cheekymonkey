@@ -350,11 +350,11 @@ cfloop
             lda (MONKEYPTR),y
             pha
 
-            ldy #POLDFIREX
+            ldy #PFIREX
             lda (MONKEYPTR),y
             tax
 
-            ldy #POLDFIREY
+            ldy #PFIREY
             lda (MONKEYPTR),y
             tay
 
@@ -385,17 +385,6 @@ afloop
             jmp afskip
 
 afcont
-            ; preserve old location
-            ldy #PFIREX
-            lda (MONKEYPTR),y
-            ldy #POLDFIREX
-            sta (MONKEYPTR),y
-
-            ldy #PFIREY
-            lda (MONKEYPTR),y
-            ldy #POLDFIREY
-            sta (MONKEYPTR),y            
-            
             ; handle horizontal
             ldy #PFIREFLAG
             lda (MONKEYPTR),y
@@ -802,6 +791,7 @@ mainloop
 
             jsr loopDelay
 
+            jsr clearCoconuts
             jsr animateCoconuts
             jsr animateMonkeys
 
@@ -809,7 +799,6 @@ mainloop
 
             jsr changeFrames
 
-            jsr clearCoconuts
             jsr clearMonkeys
 
             jmp mainloop
@@ -1328,8 +1317,6 @@ ccy         .byt 00
 /*panmidx*/     .byt 00 : \
 /*pfanmidx*/    .byt 00 : \
 /*panimptr*/    .byt 00, 00 : \
-/*poldfirex*/   .byt 00 : \
-/*poldfirey*/   .byt 00 : \
 /*poldx*/       .byt x : \
 /*poldy*/       .byt y :.)
 
@@ -1350,10 +1337,8 @@ PANMIDX = 19 ; player animation index
 PFANMIDX = 20 ; player fire (coconut) index
 PANIMPTRLO = 21
 PANIMPTRHI = 22
-POLDFIREX = 23
-POLDFIREY = 24
-POLDX = 25
-POLDY = 26
+POLDX = 23
+POLDY = 24
 
 
 ; Gimme 6 monkeys!
