@@ -77,23 +77,54 @@ charsetCopy
             
             jmp main
 
-#define LOADANIM(anim)  \
-  lda #<anim :           \
-  sta ANIMPTR    :           \
-  lda #>anim :           \
-  sta ANIMPTR+1
 
-#define LOADMONKEY \
-  clc : tya : pha : \
-  lda pctr : \
-  asl : \
-  tay : \
-  lda (MONKEYTBLPTR),y : \
-  sta MONKEYPTR : \
-  iny : \
-  lda (MONKEYTBLPTR),y : \
-  sta MONKEYPTR+1  : \
+; -------
+getCurrentMonkeyAnim
+; -------
+; Copy Anim from Monkey's PANIMPTRLO/HI to ANIMPTR in zero-page
+  ldy #PANIMPTRLO
+  lda (MONKEYPTR),y
+  sta ANIMPTR
+  ldy #PANIMPTRHI
+  lda (MONKEYPTR),y
+  sta ANIMPTR+1
+  rts
+
+; -------
+loadAnim
+; -------
+  ldy #PANIMPTRLO
+  sta (MONKEYPTR),y
+  sta ANIMPTR
+  txa
+  ldy #PANIMPTRHI
+  sta (MONKEYPTR),y
+  sta ANIMPTR+1
+  rts
+
+
+; Load Anim into Monkey's PANIMPTRLO/HI and copy it into zero-page too.
+#define LOADANIM(anim)  \
+  lda #<anim  : \
+  ldx #>anim : \
+  jsr loadAnim
+
+; --------
+loadMonkey
+; --------
+  clc : tya : pha :
+  lda pctr :
+  asl :
+  tay :
+  lda (MONKEYTBLPTR),y :
+  sta MONKEYPTR :
+  iny :
+  lda (MONKEYTBLPTR),y :
+  sta MONKEYPTR+1  :
   pla : tay
+  rts
+
+#define LOADMONKEY jsr loadMonkey
 
 #define LOADCMONKEY \
   clc : tya : pha : \
@@ -212,6 +243,8 @@ dploop
             ldy #PCOLOUR
             lda (MONKEYPTR),y
             sta color
+            
+            jsr getCurrentMonkeyAnim
             
             ldy #PANMIDX
             lda (MONKEYPTR),y
@@ -547,6 +580,8 @@ changeFrames
             sta pctr
 
 chgfloop
+            LOADMONKEY
+            
             ; change frame
             ldy #PANMIDX
             lda (MONKEYPTR),y
@@ -663,16 +698,9 @@ cmskip
 cmend
             rts
 
-
 ; ----------
-; MAIN
+initMonkeys
 ; ----------
-main
-            ; store current animation ptr at $fa-fb
-            LOADANIM(anmwalk)
-
-            jsr drawGameScreen
-
             lda #<monkeytable
             sta MONKEYTBLPTR
             lda #>monkeytable
@@ -690,6 +718,13 @@ main
             ldy #PY
             sta (MONKEYPTR),y
             
+            ; common initialisation for all monkeys
+            lda #$00
+            sta pctr
+            
+imloop
+            LOADMONKEY
+            
             lda #$00
             ldy #PFIREFLAG
             sta (MONKEYPTR),y
@@ -697,6 +732,28 @@ main
             lda #$01
             ldy #PVIS
             sta (MONKEYPTR),y
+            
+            LOADANIM(anmwalk)
+
+            lda pctr
+            cmp #06
+            beq imend
+            inc pctr
+            jmp imloop
+imend
+            rts
+
+
+; ----------
+; MAIN
+; ----------
+main
+            ; store current animation ptr at $fa-fb
+
+            jsr drawGameScreen
+
+            jsr initMonkeys
+            
 
 mainloop
             jsr drawMonkeys
@@ -1238,7 +1295,8 @@ ccy         .byt 00
 /*pfirebuf*/    .byt 00 : \
 /*pfirecolbuf*/ .byt 00 : \
 /*panmidx*/     .byt 00 : \
-/*pfanmidx*/    .byt 00 :.)
+/*pfanmidx*/    .byt 00 : \
+/*panimptr*/    .byt 00, 00 :.)
 
 PVIS = 0 ; visibility flag for all characters
 PX = 1
@@ -1255,6 +1313,8 @@ PFIREBUF = 17 ; what char was written on top of
 PFIRECOLBUF = 18 ; what char colour was written on top of
 PANMIDX = 19 ; player animation index
 PFANMIDX = 20 ; player fire (coconut) index
+PANIMPTRLO = 21
+PANIMPTRHI = 22
 
 
 ; Gimme 6 monkeys!
@@ -1285,6 +1345,12 @@ endCode
             * = $1a00
             .dsb (*-endCode), 0
             * = $1a00
+
+; During compilation, show how many free bytes are left (to help me keep track of things)
+; upper limit of my mem is start of charset, at $1800
+FREE_BYTES = $1800 - endCode
+#print FREE_BYTES
+
 
 ;------------
 ; CHARSET
