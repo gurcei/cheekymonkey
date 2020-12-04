@@ -794,15 +794,12 @@ anmmloop
             ldy #POLDY
             sta (MONKEYPTR),y
             
-            lda pctr
-            beq anmmskip
-
-            ; don't move enemy if pause-time not reached yet
+            ; don't move monkey if pause-time not reached yet
             ldx keyinpause
             cpx #$02
             bne anmmskip
-            
-            ; don't move enemy if he's dizzy
+
+            ; don't move monkey if he's dizzy
             ldy #PANIMPTRLO
             lda (MONKEYPTR),y
             cmp #<anmdizzy
@@ -812,8 +809,16 @@ anmmloop
             lda (MONKEYPTR),y
             cmp #>anmdizzy
             beq anmmskip
-
+            
 anmmmove
+            lda pctr    ; is this 1st monkey?
+            bne anmmenemy
+            
+            ; then move it based on joystick
+            jsr actOnJoystickInput
+            jmp anmmskip
+
+anmmenemy
             ; move individual enemy monkeys
             jsr moveEnemyMonkey
             
@@ -823,16 +828,13 @@ anmmskip
             cmp #06
             bne anmmloop
             
-anmmp1input
-            ; get keyboard input
+anmmincpause
             ldx keyinpause
             inx
             cpx #$03
-            bne skipJoy
-            jsr actOnJoystickInput
+            bne anmmskipreset
             ldx #$00
-
-skipJoy
+anmmskipreset
             stx keyinpause
             rts
 
@@ -1392,7 +1394,8 @@ ccy         .byt 00
 /*panimptr*/    .byt 00, 00 : \
 /*poldx*/       .byt x : \
 /*poldy*/       .byt y : \
-/*pmvt*/        .byt mvt :.)
+/*pmvt*/        .byt mvt : \
+/*pdizzycnt*/   .byt 0 :.)
 
 PVIS = 0 ; visibility flag for all characters
 PX = 1
@@ -1414,6 +1417,7 @@ PANIMPTRHI = 22
 POLDX = 23
 POLDY = 24
 PMVT = 25 ; this is a movement timer (0,1 are moves to the left, 2,3 are moves to the right, and then it cycles)
+PDIZZYCNT = 26 ; a counter for how long player has been dizzy
 
 
 ; Gimme 6 monkeys!
