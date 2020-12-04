@@ -65,15 +65,7 @@ finished
             lda #$fe
             sta $9005
 
-            ; copy character set from 32768 to 7168 (only first 512 bytes, this gets me alphanumerics)
-            ldy #$00
-charsetCopy
-            lda $8000,y
-            sta $1800,y
-            lda $8100,y
-            sta $1900,y
-            iny
-            bne charsetCopy
+            ; no longer copying first 512 bytes of charset (the alphanumerics), to save 512 bytes ;)
             
             jmp main
 
@@ -1282,7 +1274,7 @@ drawImg2x2
 ;------------
 ; DATA
 ;------------
-message     .asc "HELLO, WORLD!" : .byt 0
+message     .asc "CHEEKY MONKEY" : .byt 0
 pjoy        .byt 00   ; bit0=left, bit1=right, bit2=up, bit3=down, bit4=fire
 loc         .word 0000
 color       .byt 00
@@ -1385,8 +1377,9 @@ endCode
             * = $1a00
 
 ; During compilation, show how many free bytes are left (to help me keep track of things)
-; upper limit of my mem is start of charset, at $1800
-FREE_BYTES = $1800 - endCode
+; upper limit of my mem is start of my custom charset chars, at $1a00
+; (not $1800 anymore, as I'm forgoing the alphanumerics, to save space ;))
+FREE_BYTES = $1a00 - endCode
 #print FREE_BYTES
 
 
