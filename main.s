@@ -24,6 +24,7 @@ MONKEYPTR   = $f8   ; pointer to the current monkey
 MONKEYTBLPTR= $f6   ; pointer to the monkey table
 CMONKEYPTR  = $f4   ; pointer to the current coconut of interest to test for collision against current monkey
 
+MONKEY_MOVE_WIDTH = 3
 #define MLDA(field) ldy #field : lda (MONKEYPTR),y
 #define MLSTA(field,val) lda val : ldy #field : sta (MONKEYPTR),y
 #define MSTA(field) ldy #field : sta (MONKEYPTR),y
@@ -453,7 +454,7 @@ afrd0
             sta (MONKEYPTR),y
             
             MLDA(PFIRETIME)
-            cmp #06
+            cmp #07
             bne afskip
             MLSTA(PFIREFLAG, #PFIREFLAG_OFF)
             jmp afskip
@@ -764,7 +765,7 @@ actEnemyFire
             ; adjust enemy coconut starting position
             MLDA(PY)
             clc
-            adc #$03
+            adc #$02
             MSTA(PFIREY)
             
             jmp actEnd
@@ -780,7 +781,7 @@ moveEnemyMonkey
 
             ldy #PMVT
             lda (MONKEYPTR),y
-            cmp #$02
+            cmp #MONKEY_MOVE_WIDTH
             bcs mem23
 
 mem01       ; move to left
@@ -806,7 +807,7 @@ memincmvt
             lda (MONKEYPTR),y
             tax
             inx
-            cpx #$04
+            cpx #(MONKEY_MOVE_WIDTH*2)
             bne memskipreset
             ldx #$00
             
