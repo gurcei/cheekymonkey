@@ -776,6 +776,46 @@ memskipreset
             rts
 
 ; ----------
+assessDizzy
+; ----------
+            ldy #PDIZZYCNT
+            lda (MONKEYPTR),y
+            tax
+            inx
+            txa
+            sta (MONKEYPTR),y
+            
+            cpx #$04        ; have we been dizzy for long enough?
+            bne assdizend
+            
+            lda #$00        ; reset the dizzy counter
+            sta (MONKEYPTR),y
+            
+            LOADANIM(anmwalk)
+            
+            lda pctr    ; if player, skip over these extra initialisations
+            beq assdizend
+                        
+assdizenemy
+            ldy #PVIS
+            lda #$00
+            sta (MONKEYPTR),y
+            
+            ; clear the last frame of the monkey
+            ldy #POLDX
+            lda (MONKEYPTR),y
+            tax
+
+            ldy #POLDY
+            lda (MONKEYPTR),y
+            tay
+
+            jsr clearImg2x2
+
+assdizend
+            rts
+            
+; ----------
 animateMonkeys
 ; ----------
             lda #$00
@@ -808,7 +848,10 @@ anmmloop
             ldy #PANIMPTRHI
             lda (MONKEYPTR),y
             cmp #>anmdizzy
-            beq anmmskip
+            bne anmmmove
+            
+            jsr assessDizzy
+            jmp anmmskip
             
 anmmmove
             lda pctr    ; is this 1st monkey?
