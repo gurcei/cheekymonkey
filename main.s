@@ -24,6 +24,9 @@ MONKEYPTR   = $f8   ; pointer to the current monkey
 MONKEYTBLPTR= $f6   ; pointer to the monkey table
 CMONKEYPTR  = $f4   ; pointer to the current coconut of interest to test for collision against current monkey
 
+#define MLDA(field) ldy #field : lda (MONKEYPTR),y
+#define MLSTA(field,val) lda val : ldy #field : sta (MONKEYPTR),y
+#define MSTA(field) ldy #field : sta (MONKEYPTR),y
 
 CHROUT   = $FFD2             ; Output character to current output device
 PLOT     = $FFF0             ; Set (clc) or get (sec) cursor position
@@ -273,8 +276,7 @@ dfloop
             LOADMONKEY
 
             ; draw fire
-            ldy #PFIREFLAG
-            lda (MONKEYPTR),y
+            MLDA(PFIREFLAG)
             beq dfskip
 
             lda #$00
@@ -330,8 +332,7 @@ cfloop
             LOADMONKEY
 
             ; clear fire
-            ldy #PFIREFLAG
-            lda (MONKEYPTR),y
+            MLDA(PFIREFLAG)
             beq cfskip
 
             ldy #PFIRECOLBUF
@@ -371,25 +372,22 @@ afloop
             LOADMONKEY
 
             ; clear fire
-            ldy #PFIREFLAG
-            lda (MONKEYPTR),y
+            MLDA(PFIREFLAG)
             bne afcont
             jmp afskip
 
 afcont
             ; handle horizontal
-            ldy #PFIREFLAG
-            lda (MONKEYPTR),y
+            MLDA(PFIREFLAG)
 
             ; fire left?
-            cmp #$01
+            ; ----------
+            cmp #PFIREFLAG_LEFT
             bne af4
 
-            ldy #PFIREBOUNCE
-            lda (MONKEYPTR),y
+            MLDA(PFIREBOUNCE)
             beq afl1
-            ldy #PFIREX
-            lda (MONKEYPTR),y
+            MLDA(PFIREX)
             clc
             adc #$01
             sta (MONKEYPTR),y
@@ -409,43 +407,61 @@ afl1
             sta (MONKEYPTR),y
 
             ; fire right?
+            ; -----------
 af4
-            ldy #PFIREFLAG
-            lda (MONKEYPTR),y
-            cmp #$03
-            bne af5
+            MLDA(PFIREFLAG)
+            cmp #PFIREFLAG_RIGHT
+            bne afrd0
 
-            ldy #PFIREBOUNCE
-            lda (MONKEYPTR),y
+            MLDA(PFIREBOUNCE)
             beq afr1
 
-            ldy #PFIREX
-            lda (MONKEYPTR),y
+            MLDA(PFIREX)
             sec
             sbc #$01
             sta (MONKEYPTR),y
             clc
-            jmp af5
+            jmp afrd0
 
 afr1
-            ldy #PFIREX
-            lda (MONKEYPTR),y
+            MLDA(PFIREX)
             clc
             adc #$01
             sta (MONKEYPTR),y
             
             cmp #21
-            bne af5
+            bne afrd0
 
             ; if x=21, then set bounce flag
-            lda #$01
-            ldy #PFIREBOUNCE
+            MLSTA(PFIREBOUNCE, #01)
+     
+            ; fire down?
+            ; ----------
+afrd0
+            MLDA(PFIREFLAG)
+            cmp #PFIREFLAG_DOWN
+            bne af5
+
+            MLDA(PFIRETIME)
+            clc
+            adc #$01
             sta (MONKEYPTR),y
+            
+            MLDA(PFIREY)
+            clc
+            adc #$01
+            sta (MONKEYPTR),y
+            
+            MLDA(PFIRETIME)
+            cmp #06
+            bne afskip
+            MLSTA(PFIREFLAG, #PFIREFLAG_OFF)
+            jmp afskip
 
             ; otherwise fire up
+            ; -----------------
 af5
-            ldy #PFIRETIME
-            lda (MONKEYPTR),y
+            MLDA(PFIRETIME)
             clc
             adc #$01
             sta (MONKEYPTR),y
@@ -454,34 +470,29 @@ af5
             cmp #$06
             bcs af1
 
-            ldy #PFIREY
-            lda (MONKEYPTR),y
+            MLDA(PFIREY)
             sec
             sbc #$01
             clc
             sta (MONKEYPTR),y
             jmp af2
 af1
-            ldy #PFIREY
-            lda (MONKEYPTR),y
+            MLDA(PFIREY)
             clc
             adc #$01
             sta (MONKEYPTR),y
 af2
-            ldy #PFIRETIME
-            lda (MONKEYPTR),y
+            MLDA(PFIRETIME)
             cmp #$0d
             bne af3
-            ldy #PFIREFLAG
-            lda #$00
-            sta (MONKEYPTR),y
+            MLSTA(PFIREFLAG, #PFIREFLAG_OFF)
 
 af3
 afskip
+            inc pctr
             lda pctr
-            cmp #00
+            cmp #06
             beq afend
-            dec pctr
             jmp afloop
 afend
             rts
@@ -703,16 +714,10 @@ initMonkeys
             sta pctr
             LOADMONKEY
 
-            lda #04
-            ldy #PX
-            sta (MONKEYPTR),y
-            lda #20
-            ldy #PY
-            sta (MONKEYPTR),y
+            MLSTA(PX, #02)
+            MLSTA(PY, #20)
             
             ; common initialisation for all monkeys
-            lda #$00
-            sta pctr
             
 imloop
             LOADMONKEY
@@ -736,8 +741,43 @@ imend
             rts
 
 ; ----------
+actEnemyFire
+; ----------
+            ; has the monkey already expired? then skip
+            MLDA(PVIS)
+            beq aefend
+            
+            ; is the monkey's coconut already thrown?
+            MLDA(PFIREFLAG)
+            bne aefend
+            
+            ; initialise a few coconut vars in preparation
+            MLSTA(PFIRETIME, #00)
+            MSTA(PFIREBOUNCE)
+
+            ; fire a coconut simply downwards for now
+            LOADANIM(anmthrowdown)
+            MLSTA(PFIREFLAG, #PFIREFLAG_DOWN)
+            
+            jsr initPlayerFire
+
+            ; adjust enemy coconut starting position
+            MLDA(PY)
+            clc
+            adc #$03
+            MSTA(PFIREY)
+            
+            jmp actEnd
+
+aefend
+            rts
+            
+
+; ----------
 moveEnemyMonkey
 ; ----------
+            jsr actEnemyFire
+
             ldy #PMVT
             lda (MONKEYPTR),y
             cmp #$02
@@ -980,25 +1020,19 @@ initPlayerFire
 ; -------
 ; NOTE - Currently hardcoded for player 1 in caller (in future, would like this to support player2 via keyboard)
 
-            ldy #PX
-            lda (MONKEYPTR),y
+            MLDA(PX)
             tax
             inx
             txa
-            ldy #PFIREX
-            sta (MONKEYPTR),y
+            MSTA(PFIREX)
 
-            ldy #PY
-            lda (MONKEYPTR),y
+            MLDA(PY)
             tay
             dey
             tya
-            ldy #PFIREY
-            sta (MONKEYPTR),y
+            MSTA(PFIREY)
 
-            lda #$00
-            ldy #PFIRETIME
-            sta (MONKEYPTR),y
+            MLSTA(PFIRETIME, #00)
             rts
 
 ; --------
@@ -1018,8 +1052,7 @@ actCheckFire
             beq actCheckLeft
 
             ; assure that monkey's coconut isn't already thrown yet
-            ldy #PFIREFLAG
-            lda (MONKEYPTR),y
+            MLDA(PFIREFLAG)
             bne actCheckLeft
 
             ; initialise a few coconut vars in preparation
@@ -1034,9 +1067,7 @@ actCheckFireRight
             and #PJOY_RIGHT
             beq actCheckFireLeft
             LOADANIM(anmthrowright)
-            lda #$03
-            ldy #PFIREFLAG
-            sta (MONKEYPTR),y
+            MLSTA(PFIREFLAG, #PFIREFLAG_RIGHT)
             
             ; check for right-most position gotchya
             ldy #PX
@@ -1056,17 +1087,13 @@ actCheckFireLeft
             and #PJOY_LEFT
             beq actFireOnly
             LOADANIM(anmthrowleft)
-            lda #$01
-            ldy #PFIREFLAG
-            sta (MONKEYPTR),y
+            MLSTA(PFIREFLAG, #PFIREFLAG_LEFT)
             jsr initPlayerFire
             jmp actEnd
 
 actFireOnly
             LOADANIM(anmthrowup)
-            lda #$02
-            ldy #PFIREFLAG
-            sta (MONKEYPTR),y
+            MLSTA(PFIREFLAG, #PFIREFLAG_UP)
             jsr initPlayerFire
             jmp actEnd
 
@@ -1397,6 +1424,7 @@ anmwalk       .byt IMG_WALK1, IMG_WALK2, IMG_WALK3, IMG_WALK2
 anmclimb      .byt IMG_CLIMB1, IMG_CLIMB2, IMG_CLIMB3, IMG_CLIMB2
 anmthrowright .byt IMG_THROWDOWN3, IMG_THROWDOWN2, IMG_THROWDOWN1, IMG_THROWDOWN2
 anmthrowup    .byt IMG_THROWDOWN2, IMG_THROWDOWN1, IMG_THROWUP1, IMG_THROWDOWN1
+anmthrowdown  .byt IMG_THROWDOWN1, IMG_THROWDOWN2, IMG_THROWDOWN3, IMG_THROWDOWN2
 anmthrowleft  .byt IMG_THROWDOWN1, IMG_THROWUP1, IMG_THROWUP2, IMG_THROWUP1
 anmcoconut    .byt IMG_COCONUT1, IMG_COCONUT2, IMG_COCONUT3, IMG_COCONUT2
 anmdizzy      .byt IMG_HIT1, IMG_HIT2, IMG_HIT1, IMG_HIT2
@@ -1446,7 +1474,12 @@ PY = 2
 PCOLOUR = 3
 PBUFF = 4
 PCOLBUFF = 8
-PFIREFLAG = 12 ; 0 = fire off, 1 = fire left, 2 = fire up, 3 = fire right
+PFIREFLAG = 12
+    PFIREFLAG_OFF = 0
+    PFIREFLAG_LEFT = 1
+    PFIREFLAG_UP = 2
+    PFIREFLAG_RIGHT = 3
+    PFIREFLAG_DOWN = 4
 PFIREBOUNCE = 13
 PFIREX = 14
 PFIREY = 15
@@ -1469,7 +1502,7 @@ MONKEYDATA(4,20,6,0)
 monkey1
 MONKEYDATA(4,13,2,1)
 monkey2
-MONKEYDATA(18,13,5,2)
+MONKEYDATA(17,13,5,2)
 monkey3
 MONKEYDATA(2,6,3,3)
 monkey4
