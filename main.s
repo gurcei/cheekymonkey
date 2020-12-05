@@ -1090,6 +1090,15 @@ actFireOnly
             jmp actEnd
 
 actCheckLeft
+            ; confirm we are on either platform
+            MLDA(PY)
+            cmp #20
+            beq aclcont
+            cmp #13
+            beq aclcont
+            jmp actCheckUp
+            
+aclcont
             lda pjoy
             and #PJOY_LEFT
             beq actCheckRight
@@ -1097,7 +1106,7 @@ actCheckLeft
             ; move player left (if not at x=0 already)
             ldy #PX
             lda (MONKEYPTR),y
-            beq actEnd
+            beq actCheckRight
             lda (MONKEYPTR),y
             tax
             dex
@@ -1114,22 +1123,41 @@ actCheckRight
             ldy #PX
             lda (MONKEYPTR),y
             cmp #20
-            beq actEnd
+            beq actCheckUp
             lda (MONKEYPTR),y
             tax
             inx
             txa
             sta (MONKEYPTR),y
             jmp actEnd
-
+            
 actCheckUp
+            ; check right ladder range
+            MLDA(PX)
+            cmp #18
+            bne acuCheckLeftLadder
+            MLDA(PY)
+            cmp #14
+            bcc acuCheckLeftLadder
+            jmp acuCont
+acuCheckLeftLadder
+            MLDA(PX)
+            cmp #02
+            bne actCheckDown
+            MLDA(PY)
+            cmp #07
+            bcc actCheckDown
+            cmp #15
+            bcs actCheckDown
+acuCont
             lda pjoy
             and #PJOY_UP
             beq actCheckDown
+            ; start climb anim
             LOADANIM(anmclimb)
             ; move player up (if not at y=0 already)
             MLDA(PY)
-            cmp #0
+            cmp #6
             beq actEnd
             lda (MONKEYPTR),y
             tax
@@ -1139,13 +1167,26 @@ actCheckUp
             jmp actEnd
 
 actCheckDown
+            ; check right ladder range
+            MLDA(PX)
+            cmp #18
+            beq acdCont
+acdCheckLeftLadder
+            cmp #02
+            bne actEnd
+            MLDA(PY)
+            cmp #13
+            bcs actEnd
+acdCont
+            cmp #18
             lda pjoy
             and #PJOY_DOWN
             beq actEnd
+            ; start climb anim
             LOADANIM(anmclimb)
             ; move player down (if not at y=21 already)
             MLDA(PY)
-            cmp #21
+            cmp #20
             beq actEnd
             lda (MONKEYPTR),y
             tax
