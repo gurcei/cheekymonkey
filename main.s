@@ -280,6 +280,17 @@ dfloop
             lda #$00
             sta color ; coconuts are black
 
+            ; figure out coconut frame
+            MLDA(PFANMIDX)
+            cmp #$03
+            bne dfanmcnt
+            sec
+            sbc #02
+dfanmcnt
+            clc
+            adc #IMG_COCONUT1
+            sta tmp4    ; store the desired coconut frame here
+            
             ldy #PFIREX
             lda (MONKEYPTR),y
             tax
@@ -288,9 +299,22 @@ dfloop
             lda (MONKEYPTR),y
             tay
 
-            lda #IMG_COCONUT1
+            lda tmp4
             jsr drawImg
+            pha
+            
+            ; advance coconut-frame
+            MLDA(PFANMIDX)
+            clc
+            adc #$01
+            cmp #$04
+            bne dfanmcnt2
+            lda #$00
+dfanmcnt2
+            MSTA(PFANMIDX)
 
+            ; update screen+colour buffer info for coconut
+            pla
             ldy #PFIREBUF
             sta (MONKEYPTR),y
 
