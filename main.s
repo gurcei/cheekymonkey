@@ -79,23 +79,19 @@ finished
 getCurrentMonkeyAnim
 ; -------
 ; Copy Anim from Monkey's PANIMPTRLO/HI to ANIMPTR in zero-page
-  ldy #PANIMPTRLO
-  lda (MONKEYPTR),y
+  MLDA(PANIMPTRLO)
   sta ANIMPTR
-  ldy #PANIMPTRHI
-  lda (MONKEYPTR),y
+  MLDA(PANIMPTRHI)
   sta ANIMPTR+1
   rts
 
 ; -------
 loadAnim
 ; -------
-  ldy #PANIMPTRLO
-  sta (MONKEYPTR),y
+  MSTA(PANIMPTRLO)
   sta ANIMPTR
   txa
-  ldy #PANIMPTRHI
-  sta (MONKEYPTR),y
+  MSTA(PANIMPTRHI)
   sta ANIMPTR+1
   rts
 
@@ -333,7 +329,7 @@ clearCoconuts
 cfloop
             LOADMONKEY
 
-            ; clear fire
+            ; is fireflag clear? then skip
             MLDA(PFIREFLAG)
             beq cfskip
 
@@ -373,7 +369,7 @@ animateCoconuts
 afloop
             LOADMONKEY
 
-            ; clear fire
+            ; is fireflag clear? then skip
             MLDA(PFIREFLAG)
             bne afcont
             jmp afskip
@@ -612,20 +608,17 @@ chgfend
 ; ---------
 checkCollision
 ; ---------
-            ldy #PVIS
-            lda (MONKEYPTR),y
+            MLDA(PVIS)
             bne cc0
             rts
 
 cc0
             ; check collision between all coconuts and this player
-            ldy #PX
-            lda (MONKEYPTR),y
+            MLDA(PX)
             tax
             stx ccx
 
-            ldy #PY
-            lda (MONKEYPTR),y
+            MLDA(PY)
             tay
             sty ccy
 
@@ -662,9 +655,6 @@ cc4
 
 ccHit
             ; switch to hit-dizzy anim
-            lda #$00
-            ldy #PFIREFLAG
-            sta (MONKEYPTR),y
             LOADANIM(anmdizzy)
             rts
 
@@ -724,13 +714,9 @@ initMonkeys
 imloop
             LOADMONKEY
             
-            lda #$00
-            ldy #PFIREFLAG
-            sta (MONKEYPTR),y
+            MLSTA(PFIREFLAG, #00)
 
-            lda #$01
-            ldy #PVIS
-            sta (MONKEYPTR),y
+            MLSTA(PVIS, #01)
             
             LOADANIM(anmwalk)
 
@@ -828,8 +814,7 @@ memskipreset
 ; ----------
 assessDizzy
 ; ----------
-            ldy #PDIZZYCNT
-            lda (MONKEYPTR),y
+            MLDA(PDIZZYCNT)
             tax
             inx
             txa
@@ -847,17 +832,13 @@ assessDizzy
             beq assdizend
                         
 assdizenemy
-            ldy #PVIS
-            lda #$00
-            sta (MONKEYPTR),y
+            MLSTA(PVIS, #00)
             
             ; clear the last frame of the monkey
-            ldy #POLDX
-            lda (MONKEYPTR),y
+            MLDA(POLDX)
             tax
 
-            ldy #POLDY
-            lda (MONKEYPTR),y
+            MLDA(POLDY)
             tay
 
             jsr clearImg2x2
@@ -890,13 +871,11 @@ anmmloop
             bne anmmskip
 
             ; don't move monkey if he's dizzy
-            ldy #PANIMPTRLO
-            lda (MONKEYPTR),y
+            MLDA(PANIMPTRLO)
             cmp #<anmdizzy
             bne anmmmove
             
-            ldy #PANIMPTRHI
-            lda (MONKEYPTR),y
+            MLDA(PANIMPTRHI)
             cmp #>anmdizzy
             bne anmmmove
             
