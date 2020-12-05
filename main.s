@@ -25,6 +25,7 @@ MONKEYTBLPTR= $f6   ; pointer to the monkey table
 CMONKEYPTR  = $f4   ; pointer to the current coconut of interest to test for collision against current monkey
 
 MONKEY_MOVE_WIDTH = 3
+
 #define MLDA(field) ldy #field : lda (MONKEYPTR),y
 #define MLSTA(field,val) lda val : ldy #field : sta (MONKEYPTR),y
 #define MSTA(field) ldy #field : sta (MONKEYPTR),y
@@ -751,6 +752,14 @@ actEnemyFire
             ; is the monkey's coconut already thrown?
             MLDA(PFIREFLAG)
             bne aefend
+
+            ; is player monkey within y-range?
+            lda pposy
+            ldy #PY
+            sec
+            sbc (MONKEYPTR),y
+            cmp #08
+            bcs aefend
             
             ; initialise a few coconut vars in preparation
             MLSTA(PFIRETIME, #00)
@@ -1039,6 +1048,9 @@ initPlayerFire
 ; --------
 actOnJoystickInput
 ; --------
+            MLDA(PY)
+            sta pposy      ; store player's y-pos somewhere to compare against enemies
+
             jsr getJoystickInput
 
 ; NOTE - again, this is hardcoded to be just for player1 (try get it to work for keyboard player 2 in future)
@@ -1137,8 +1149,7 @@ actCheckUp
             beq actCheckDown
             LOADANIM(anmclimb)
             ; move player up (if not at y=0 already)
-            ldy #PY
-            lda (MONKEYPTR),y
+            MLDA(PY)
             cmp #0
             beq actEnd
             lda (MONKEYPTR),y
@@ -1154,8 +1165,7 @@ actCheckDown
             beq actEnd
             LOADANIM(anmclimb)
             ; move player down (if not at y=21 already)
-            ldy #PY
-            lda (MONKEYPTR),y
+            MLDA(PY)
             cmp #21
             beq actEnd
             lda (MONKEYPTR),y
@@ -1442,6 +1452,7 @@ cimgy       .byt 00
 drwa        .byt 00
 ccx         .byt 00
 ccy         .byt 00
+pposy       .byt 00
 
 ; --------
 ; ARRAY OF MONKEY DATA
