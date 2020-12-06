@@ -23,12 +23,22 @@ ANIMPTR     = $fa
 MONKEYPTR   = $f8   ; pointer to the current monkey
 MONKEYTBLPTR= $f6   ; pointer to the monkey table
 CMONKEYPTR  = $f4   ; pointer to the current coconut of interest to test for collision against current monkey
+SFXPTR  = $f2   ; pointer to currently playing sound effect
 
 MONKEY_MOVE_WIDTH = 3
 
 #define MLDA(field) ldy #field : lda (MONKEYPTR),y
 #define MLSTA(field,val) lda val : ldy #field : sta (MONKEYPTR),y
 #define MSTA(field) ldy #field : sta (MONKEYPTR),y
+
+#define LOADSFX(sfx) \
+    lda #<sfx : \
+    sta SFXPTR : \
+    lda #>sfx : \
+    sta SFXPTR+1 : \
+    lda #$00 : \
+    sta sfxtmr
+
 
 CHROUT   = $FFD2             ; Output character to current output device
 PLOT     = $FFF0             ; Set (clc) or get (sec) cursor position
@@ -47,6 +57,9 @@ basicEnd    .word 0           ; End of Basic program
 ; ----------
 ; INIT
 ; ----------
+            ; turn on volume
+            lda #15
+            sta $900e
             ; switch on current state
 stateloop
             ; no longer copying first 512 bytes of charset (the alphanumerics), to save 512 bytes ;)
@@ -332,6 +345,25 @@ m1
 
             dex
             bne m2
+            
+            ; playing sfx?
+            ldy sfxtmr
+            cpy #$ff
+            beq mldend
+            
+            ; play sound on voice1
+            lda (SFXPTR),y
+            sta $900a
+            bne mldcont
+            lda #$ff
+            sta sfxtmr
+            rts
+            
+mldcont
+            inc sfxtmr
+            
+            
+mldend
             rts
 
 ; ---------
@@ -669,6 +701,7 @@ cc4
 
 ccHit
             ; switch to hit-dizzy anim
+            LOADSFX(sfxdizzy)
             LOADANIM(anmdizzy)
             rts
 
@@ -766,6 +799,7 @@ actEnemyFire
             MSTA(PFIREBOUNCE)
 
             ; fire a coconut simply downwards for now
+            LOADSFX(sfxthrowdown)
             LOADANIM(anmthrowdown)
             MLSTA(PFIREFLAG, #PFIREFLAG_DOWN)
             
@@ -1102,6 +1136,7 @@ initPlayerFire
             MLSTA(PFIRETIME, #00)
             rts
 
+
 ; --------
 actOnJoystickInput
 ; --------
@@ -1131,6 +1166,9 @@ actCheckFire
             sta (MONKEYPTR),y
             ldy #PFIREBOUNCE
             sta (MONKEYPTR),y
+            
+            ; play coconut throw up sfx
+            LOADSFX(sfxthrowup)
 
 actCheckFireRight
             lda pjoy
@@ -1551,6 +1589,9 @@ anmthrowdown  .byt IMG_THROWDOWN1, IMG_THROWDOWN2, IMG_THROWDOWN3, IMG_THROWDOWN
 anmthrowleft  .byt IMG_THROWDOWN1, IMG_THROWUP1, IMG_THROWUP2, IMG_THROWUP1
 anmcoconut    .byt IMG_COCONUT1, IMG_COCONUT2, IMG_COCONUT3, IMG_COCONUT2
 anmdizzy      .byt IMG_HIT1, IMG_HIT2, IMG_HIT1, IMG_HIT2
+sfxthrowup    .byt 240, 242, 244, 246, 0
+sfxdizzy      .byt 210, 208, 206, 204, 0
+sfxthrowdown  .byt 220, 218, 216, 214, 0
 keyinpause  .byt 00
 tmp1        .byt 00
 tmp2        .byt 00
@@ -1569,6 +1610,7 @@ state       .byt 00
     STATE_TITLE = $00
     STATE_GAME  = $01
     STATE_GAMEOVER = $02
+sfxtmr      .byt $ff     ; $ff = flag for sfx not currently playing
 
 ; --------
 ; ARRAY OF MONKEY DATA
