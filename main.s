@@ -143,7 +143,17 @@ loadMonkey
   sta CMONKEYPTR+1  : \
   pla : tay
 
+; ------------
+drawGrass
+; ------------
+    ldx tmp1
+    lda #IMG_GRASS
+    jsr drawImg
+    rts
+
+; ------------
 drawGameScreen
+; ------------
             ; clear the screen
             lda #147
             jsr CHROUT
@@ -155,22 +165,16 @@ drawGameScreen
 
 grassloop
             ; lower layer
-            ldx tmp1
             ldy #22
-            lda #IMG_GRASS
-            jsr drawImg
+            jsr drawGrass
 
             ; mid layer
-            ldx tmp1
             ldy #15
-            lda #IMG_GRASS
-            jsr drawImg
+            jsr drawGrass
 
             ; top layer
-            ldx tmp1
             ldy #8
-            lda #IMG_GRASS
-            jsr drawImg
+            jsr drawGrass
 
             ldx tmp1
             inx
@@ -986,19 +990,11 @@ stateGameTitle
             lda #240
             sta $9005
 
-            ; clear the screen
-            lda #147
-            jsr CHROUT
-
             OUTTEXT(message)
-
-            ldx #4
-            ldy #1
-            clc
-            jsr PLOT
-
+            LOADSFX(sfxtitle)
 
 sgtwaitfiredown
+            jsr loopDelay
             jsr getJoystickInput
             lda pjoy
             and #PJOY_FIRE
@@ -1592,6 +1588,7 @@ anmdizzy      .byt IMG_HIT1, IMG_HIT2, IMG_HIT1, IMG_HIT2
 sfxthrowup    .byt 240, 242, 244, 246, 0
 sfxdizzy      .byt 210, 208, 206, 204, 0
 sfxthrowdown  .byt 220, 218, 216, 214, 0
+sfxtitle      .byt 225, 215, 225, 231, 225, 231, 235, 231, 235, 240, 240, 240, 0
 keyinpause  .byt 00
 tmp1        .byt 00
 tmp2        .byt 00
