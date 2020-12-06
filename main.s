@@ -40,32 +40,14 @@ PLOT     = $FFF0             ; Set (clc) or get (sec) cursor position
             .word 2020        ; The line number for the SYS statement
             .byt  TOK_SYS     ; SYS token
             .asc  " "
-            .asc  "4150"      ; Start of machine language (0x1036)
-            .byt  COLON       ; Colon character
-            .byt  TOK_REM     ; REM token
-            .asc  " "
-            .dsb  15,BSPACE   ; Backspace characters to make line invisible
-            .asc  "(C) GURCE ISIKYILDIZ"
+            .asc  "4110"      ; Start of machine language (0x1036)
             .byt  0           ; End of Basic line
 basicEnd    .word 0           ; End of Basic program
 
-            ; Print 'HELLO, WORLD!"
-            ldx #$00
-loop        lda message, x
-            beq finished
-            jsr CHROUT
-            inx
-            bne loop
-
-finished
 ; ----------
 ; INIT
 ; ----------
             ; switch on current state
-            ; move character set to ram at 6144
-            lda #$fe
-            sta $9005
-
 stateloop
             ; no longer copying first 512 bytes of charset (the alphanumerics), to save 512 bytes ;)
             
@@ -152,15 +134,6 @@ drawGameScreen
             ; clear the screen
             lda #147
             jsr CHROUT
-
-            ; draw the grass
-            ; lda #$1E  ; green colour
-            ; jsr CHROUT
-
-            ; ldx #22
-            ; ldy #21
-            ; clc
-            ; jsr PLOT
 
             lda #00
             sta tmp1
@@ -951,17 +924,69 @@ anmmskipreset
             stx keyinpause
             rts
 
+#define OUTTEXT(txt) \
+    lda #<txt : \
+    sta $fe : \
+    lda #>txt : \
+    sta $ff : \
+    jsr outText
+    
+; ------
+outText
+; ------
+            ldy #$00
+otloop
+            lda ($fe),y
+            beq otend
+            jsr CHROUT
+            iny
+            bne otloop
+otend
+            rts
+
 ; ----------
 ; STATE: TITLE
 ; ----------
 stateGameTitle
+            ; move character set back to original character rom
+            lda #240
+            sta $9005
+
+            ; clear the screen
+            lda #147
+            jsr CHROUT
+
+            OUTTEXT(message)
+
+            ldx #4
+            ldy #1
+            clc
+            jsr PLOT
+
+
+sgtwaitfiredown
+            jsr getJoystickInput
+            lda pjoy
+            and #PJOY_FIRE
+            beq sgtwaitfiredown
+
+sgtwaitfireup
+            jsr getJoystickInput
+            lda pjoy
+            and #PJOY_FIRE
+            bne sgtwaitfireup
+            
+            lda #STATE_GAME
+            sta state
             rts
 
 ; ----------
 ; STATE: GAME
 ; ----------
 stateGame
-            ; store current animation ptr at $fa-fb
+            ; move character set to ram at 6144
+            lda #$fe
+            sta $9005
 
             jsr drawGameScreen
 
@@ -1497,10 +1522,24 @@ drawImg2x2
             
             rts
 
+CLS = $93
+BLACK = $90
+GREEN = $1e
+BLUE = $1f
+RIGHT = $1d
+DOWN = $11
+RETURN = $0d
+
 ;------------
 ; DATA
 ;------------
-message     .asc "CHEEKY MONKEY" : .byt 0
+message     .byt CLS, GREEN, DOWN, DOWN, DOWN, DOWN, RIGHT, RIGHT, RIGHT
+            .asc "CHEEKY MONKEY"
+            .byt RETURN, DOWN, DOWN, RIGHT, BLUE
+            .asc "(C) GURCE ISIKYILDIZ"
+            .byt RETURN, DOWN, DOWN, RIGHT, RIGHT, RIGHT, RIGHT, RIGHT, BLACK
+            .asc "PRESS FIRE"
+            .byt 0
 pjoy        .byt 00   ; bit0=left, bit1=right, bit2=up, bit3=down, bit4=fire
 loc         .word 0000
 color       .byt 00
@@ -1526,7 +1565,7 @@ drwa        .byt 00
 ccx         .byt 00
 ccy         .byt 00
 pposy       .byt 00
-state       .byt 01
+state       .byt 00
     STATE_TITLE = $00
     STATE_GAME  = $01
     STATE_GAMEOVER = $02
