@@ -61,18 +61,35 @@ finished
 ; ----------
 ; INIT
 ; ----------
-            ; change end of basic
-            ; lda #$1c
-            ; sta $34
-            ; sta $38
-
+            ; switch on current state
             ; move character set to ram at 6144
             lda #$fe
             sta $9005
 
+stateloop
             ; no longer copying first 512 bytes of charset (the alphanumerics), to save 512 bytes ;)
             
-            jmp main
+            ; State Machine
+            ; -------------
+            
+            ; Title Screen?
+            lda state
+            bne checkStateGame
+            jsr stateGameTitle
+            jmp stateloop
+            
+            ; Game
+checkStateGame
+            cmp #STATE_GAME
+            bne initGameOver
+            jsr stateGame
+            jmp stateloop
+            
+            ; Game Over
+initGameOver
+            jsr stateGameOver
+            
+            jmp stateloop
 
 
 ; -------
@@ -935,9 +952,15 @@ anmmskipreset
             rts
 
 ; ----------
-; MAIN
+; STATE: TITLE
 ; ----------
-main
+stateGameTitle
+            rts
+
+; ----------
+; STATE: GAME
+; ----------
+stateGame
             ; store current animation ptr at $fa-fb
 
             jsr drawGameScreen
@@ -962,6 +985,12 @@ mainloop
             jsr clearMonkeys
 
             jmp mainloop
+            rts
+
+; ----------
+; STATE: GAMEOVER
+; ----------
+stateGameOver
             rts
 
 ; --------
@@ -1497,6 +1526,10 @@ drwa        .byt 00
 ccx         .byt 00
 ccy         .byt 00
 pposy       .byt 00
+state       .byt 01
+    STATE_TITLE = $00
+    STATE_GAME  = $01
+    STATE_GAMEOVER = $02
 
 ; --------
 ; ARRAY OF MONKEY DATA
