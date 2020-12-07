@@ -756,6 +756,9 @@ initMonkeys
             lda #$00
             sta pctr
             LOADMONKEY
+            
+            lda #$03
+            sta lives
 
             MLSTA(PX, #02)
             MLSTA(PY, #20)
@@ -881,7 +884,7 @@ assessDizzy
             LOADANIM(anmwalk)
             
             lda pctr    ; if player, skip over these extra initialisations
-            beq assdizend
+            beq assdizplayer
                         
 assdizenemy
             MLSTA(PVIS, #00)
@@ -894,7 +897,14 @@ assdizenemy
             tay
 
             jsr clearImg2x2
+            jmp assdizend
 
+assdizplayer
+            dec lives
+            lda lives
+            bne assdizend
+            lda #STATE_GAMELOSE
+            sta state
 assdizend
             rts
             
@@ -981,18 +991,9 @@ otloop
             bne otloop
 otend
             rts
-
 ; ----------
-; STATE: TITLE
+waitFire
 ; ----------
-stateGameTitle
-            ; move character set back to original character rom
-            lda #240
-            sta $9005
-
-            OUTTEXT(message)
-            LOADSFX(sfxtitle)
-
 sgtwaitfiredown
             jsr loopDelay
             jsr getJoystickInput
@@ -1008,6 +1009,21 @@ sgtwaitfireup
             
             lda #STATE_GAME
             sta state
+            rts
+
+; ----------
+; STATE: TITLE
+; ----------
+stateGameTitle
+            ; move character set back to original character rom
+            lda #240
+            sta $9005
+
+            OUTTEXT(message)
+            LOADSFX(sfxtitle)
+            
+            jsr waitFire
+
             rts
 
 ; ----------
@@ -1039,13 +1055,40 @@ mainloop
 
             jsr clearMonkeys
 
+            lda state
+            cmp #STATE_GAME
+            bne endgame
+
             jmp mainloop
+            
+endgame
             rts
 
 ; ----------
 ; STATE: GAMEOVER
 ; ----------
 stateGameOver
+            ; move character set back to original character rom
+            lda #240
+            sta $9005
+
+            lda state
+            cmp #STATE_GAMEWIN
+            bne sgolose
+            OUTTEXT(winmsg)
+            LOADSFX(sfxwin)
+            jmp sgocont
+            
+sgolose
+            OUTTEXT(losemsg)
+            LOADSFX(sfxlose)
+
+sgocont
+            jsr waitFire
+            
+            lda #STATE_TITLE
+            sta state
+
             rts
 
 ; --------
@@ -1257,6 +1300,11 @@ acuCheckLeftLadder
             cmp #02
             bne actCheckDown
             MLDA(PY)
+            cmp #07
+            bne acul1
+            lda #STATE_GAMEWIN
+            sta state
+acul1
             cmp #07
             bcc actCheckDown
             cmp #15
@@ -1574,6 +1622,12 @@ message     .byt CLS, GREEN, DOWN, DOWN, DOWN, DOWN, RIGHT, RIGHT, RIGHT
             .byt RETURN, DOWN, DOWN, RIGHT, RIGHT, RIGHT, RIGHT, RIGHT, BLACK
             .asc "PRESS FIRE"
             .byt 0
+winmsg      .byt CLS, GREEN, DOWN
+            .asc "YOU WIN THE BIG BANANA"
+            .byt 00
+losemsg     .byt CLS, GREEN, DOWN, RIGHT, RIGHT, RIGHT, RIGHT, RIGHT, RIGHT, RIGHT, RIGHT
+            .asc "LOSER!"
+            .byt 00
 pjoy        .byt 00   ; bit0=left, bit1=right, bit2=up, bit3=down, bit4=fire
 loc         .word 0000
 color       .byt 00
@@ -1589,6 +1643,8 @@ sfxthrowup    .byt 240, 242, 244, 246, 0
 sfxdizzy      .byt 210, 208, 206, 204, 0
 sfxthrowdown  .byt 220, 218, 216, 214, 0
 sfxtitle      .byt 225, 215, 225, 231, 225, 231, 235, 231, 235, 240, 240, 240, 0
+sfxwin        .byt 225, 215, 225, 231, 225, 231, 235, 231, 235, 240, 240, 240, 0
+sfxlose       .byt 225, 215, 225, 231, 225, 231, 235, 231, 235, 240, 240, 240, 0
 keyinpause  .byt 00
 tmp1        .byt 00
 tmp2        .byt 00
@@ -1606,8 +1662,10 @@ pposy       .byt 00
 state       .byt 00
     STATE_TITLE = $00
     STATE_GAME  = $01
-    STATE_GAMEOVER = $02
+    STATE_GAMEWIN = $02
+    STATE_GAMELOSE = $03
 sfxtmr      .byt $ff     ; $ff = flag for sfx not currently playing
+lives       .byt 3
 
 ; --------
 ; ARRAY OF MONKEY DATA
