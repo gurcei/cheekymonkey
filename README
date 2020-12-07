@@ -1,0 +1,38 @@
+CHEEKY MONKEY
+=============
+A game for the VIC20
+
+(c) Gurce Isikyildiz 2020
+
+Description
+-----------
+Guide your cheeky monkey to the top of the food-chain by throwing coconuts at all the other cheeky monkeys that stand in your way!
+
+You can throw your coconuts in one of three possible directions:
+- to the left
+- upwards
+- to the right
+
+Note that by throwing a coconut upwards, beware that gravity will eventually bring the coconut hurtling back to the ground, so be sure to move out of the way before it lands!
+
+Coconuts also rebound from the left & right edges of the screen. On occasions, this may prove helpful, or harmful :)
+
+Your cheeky monkey is a fairly resilient fellow thankfully, capable withstanding 3 coconut knocks to the head before medical attention will be needed, and that will lead to the end of the game.
+
+Controls
+--------
+This game makes use of the VIC20 Joystick port.
+
+Left & Right = Move monkey left & right
+   Up & Down = Monkey climbs up & down the ladder
+        Fire = Throw coconut up
+ Left + Fire = Throw coconut to the left
+Right + Fire = Throw coconut to the right 
+
+My Ramblings
+------------
+This has been my first 100% assembly game. Prior to this, I had dabbled in assembly, written small helper routines that were called from BASIC. So I enjoyed the challenge of getting more comfortable with expressing game-play via assembly.
+
+I'll share the source-code on github, in-case others might want to inspect and explore, though if others have plans to make use of it in their own projects in some way, it'd be nice if I were asked, or some credit/acknowledgement given ;)
+
+Apart from that, no worries :)
