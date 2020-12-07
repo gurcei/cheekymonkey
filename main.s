@@ -24,6 +24,7 @@ MONKEYPTR   = $f8   ; pointer to the current monkey
 MONKEYTBLPTR= $f6   ; pointer to the monkey table
 CMONKEYPTR  = $f4   ; pointer to the current coconut of interest to test for collision against current monkey
 SFXPTR  = $f2   ; pointer to currently playing sound effect
+TMPPTR  = $f0
 
 MONKEY_MOVE_WIDTH = 3
 
@@ -38,6 +39,15 @@ MONKEY_MOVE_WIDTH = 3
     sta SFXPTR+1 : \
     lda #$00 : \
     sta sfxtmr
+
+#define ADD16(ptr,val) \
+    clc : \
+    lda val : \
+    adc ptr : \
+    sta ptr : \
+    lda #$00 : \
+    adc ptr+1 : \
+    sta ptr+1
 
 
 CHROUT   = $FFD2             ; Output character to current output device
@@ -341,6 +351,11 @@ loopDelay
 ; ---------
             ; add pause/delay after drawing screen contents
             ldx#$40
+            
+            lda state
+            cmp #STATE_GAME
+            beq m2
+            ldx#$60
 m2
             ldy#$00
 m1
@@ -364,6 +379,13 @@ m1
             rts
             
 mldcont
+            cmp #$02    ; this value means to repeat
+            bne mldcont2
+            ldy #$00
+            sty sfxtmr
+            rts
+            
+mldcont2
             inc sfxtmr
             
             
@@ -991,12 +1013,72 @@ otloop
             bne otloop
 otend
             rts
+
+; ----------
+ldtmpptr
+; ----------
+    sta TMPPTR
+    stx TMPPTR+1
+    rts
+
+; ----------
+ldanim
+; ----------
+            jsr ldtmpptr
+            
+            inc tmp3
+            lda #$01
+            and tmp3
+            beq cja2
+            
+            ADD16(TMPPTR, #32)
+
+cja2
+            jsr drawImgJumbo
+            jsr loopDelay
+            rts
+
+
+; ----------
+checkJumboAnim
+; ----------
+            lda state
+            cmp #STATE_GAMEWIN
+            bne cjacheck2
+            
+            lda #<throwup1
+            ldx #>throwup1
+            jsr ldanim
+            rts
+
+cjacheck2
+            cmp #STATE_GAMELOSE
+            bne cjacheck3
+            
+            lda #<hit1
+            ldx #>hit1
+            jsr ldanim            
+            rts
+
+cjacheck3
+            cmp #STATE_TITLE
+            bne cjaend
+
+            lda #<walk1
+            ldx #>walk1
+            jsr ldanim
+            
+cjaend
+            rts
+
+
 ; ----------
 waitFire
 ; ----------
 sgtwaitfiredown
             jsr loopDelay
             jsr getJoystickInput
+            jsr checkJumboAnim
             lda pjoy
             and #PJOY_FIRE
             beq sgtwaitfiredown
@@ -1078,12 +1160,16 @@ stateGameOver
             OUTTEXT(winmsg)
             LOADSFX(sfxwin)
             jmp sgocont
-            
+
+            lda #BLUE
+            sta color
+
 sgolose
             OUTTEXT(losemsg)
             LOADSFX(sfxlose)
 
 sgocont
+
             jsr waitFire
             
             lda #STATE_TITLE
@@ -1501,6 +1587,84 @@ drawImg
             ldx tmp4  ; return x = colour value written over
             rts
 
+JUMBOX = $04
+JUMBOY = $06
+
+; -----------
+drawJumboIter
+; -----------
+            jsr prepareScreenPtrs
+            jsr drawJumboChar
+            ADD16(TMPPTR, #8)
+            rts
+
+; -----------
+drawImgJumbo
+; -----------
+            ldx #JUMBOX
+            ldy #JUMBOY
+            jsr drawJumboIter
+
+            ldx #JUMBOX + 8
+            ldy #JUMBOY
+            jsr drawJumboIter
+            
+            ldx #JUMBOX
+            ldy #JUMBOY + 8
+            jsr drawJumboIter
+
+            ldx #JUMBOX + 8
+            ldy #JUMBOY + 8
+            jsr drawJumboIter
+
+            rts
+
+            
+; -----------
+drawJumboChar
+; -----------
+            ; draw first row of char
+            ldy #$00
+            sty cimgy
+
+            lda #08
+            sta tmp4    ; tmp4 = row-count of char
+
+dijDoRowsInCharLoop
+
+            ldy cimgy       ; cimgy = byte-index into current char's char-data
+            lda (TMPPTR),y
+            
+            ldx #08
+            ldy #00
+dijDoBitsInRowLoop
+            rol
+            pha
+            lda #$a0        ; solid reverse char
+            bcs dijCont
+dijDoClear
+            lda #$20        ; blank space char
+dijCont
+            sta (SCREENPTR),y
+            lda #06
+            sta (COLOURPTR),y
+            pla
+            
+            iny
+            dex
+            bne dijDoBitsInRowLoop
+            
+            ADD16(SCREENPTR, #22)
+            ADD16(COLOURPTR, #22)
+            inc cimgy
+            lda tmp4
+            sec
+            sbc #$01
+            sta tmp4
+            bne dijDoRowsInCharLoop
+            
+            rts
+
 ; --------
 drawImg2x2
 ; --------
@@ -1615,17 +1779,17 @@ RETURN = $0d
 ;------------
 ; DATA
 ;------------
-message     .byt CLS, GREEN, DOWN, DOWN, DOWN, DOWN, RIGHT, RIGHT, RIGHT
+message     .byt CLS, GREEN, DOWN, RIGHT, RIGHT, RIGHT
             .asc "CHEEKY MONKEY"
-            .byt RETURN, DOWN, DOWN, RIGHT, BLUE
+            .byt RETURN, DOWN, RIGHT, BLUE
             .asc "(C) GURCE ISIKYILDIZ"
-            .byt RETURN, DOWN, DOWN, RIGHT, RIGHT, RIGHT, RIGHT, RIGHT, BLACK
+            .byt RETURN, DOWN, RIGHT, RIGHT, RIGHT, RIGHT, RIGHT, BLACK
             .asc "PRESS FIRE"
             .byt 0
-winmsg      .byt CLS, GREEN, DOWN
+winmsg      .byt CLS, GREEN, DOWN, DOWN, DOWN
             .asc "YOU WIN THE BIG BANANA"
             .byt 00
-losemsg     .byt CLS, GREEN, DOWN, RIGHT, RIGHT, RIGHT, RIGHT, RIGHT, RIGHT, RIGHT, RIGHT
+losemsg     .byt CLS, GREEN, DOWN, DOWN, DOWN, RIGHT, RIGHT, RIGHT, RIGHT, RIGHT, RIGHT, RIGHT, RIGHT
             .asc "LOSER!"
             .byt 00
 pjoy        .byt 00   ; bit0=left, bit1=right, bit2=up, bit3=down, bit4=fire
@@ -1642,9 +1806,27 @@ anmdizzy      .byt IMG_HIT1, IMG_HIT2, IMG_HIT1, IMG_HIT2
 sfxthrowup    .byt 240, 242, 244, 246, 0
 sfxdizzy      .byt 210, 208, 206, 204, 0
 sfxthrowdown  .byt 220, 218, 216, 214, 0
-sfxtitle      .byt 225, 215, 225, 231, 225, 231, 235, 231, 235, 240, 240, 240, 0
+sfxtitle      .byt 195, 1, 195, 235, 225, 235
+              .byt 195, 1, 195, 235, 225, 235
+              .byt 195, 1, 195, 237, 225, 237
+              .byt 195, 1, 195, 237, 225, 237
+              .byt 195, 1, 195, 239, 225, 239
+              .byt 195, 1, 195, 239, 225, 239
+              .byt 195, 1, 195, 240, 225, 240
+              .byt 195, 1, 195, 240, 225, 240
+              
+              .byt 195, 1, 195, 235, 232, 231
+              .byt 195, 1, 195, 235, 237, 235
+              .byt 195, 1, 195, 237, 235, 232
+              .byt 195, 1, 195, 237, 239, 237
+              .byt 195, 1, 195, 239, 237, 235
+              .byt 195, 1, 195, 239, 240, 239
+              .byt 195, 1, 195, 240, 235, 231
+              .byt 195, 1, 195, 215, 219, 225
+              .byt 2
+              
 sfxwin        .byt 225, 215, 225, 231, 225, 231, 235, 231, 235, 240, 240, 240, 0
-sfxlose       .byt 225, 215, 225, 231, 225, 231, 235, 231, 235, 240, 240, 240, 0
+sfxlose       .byt 235, 237, 235, 232, 235, 232, 231, 232, 231, 228, 231, 228, 225, 225, 0
 keyinpause  .byt 00
 tmp1        .byt 00
 tmp2        .byt 00
@@ -1659,7 +1841,7 @@ drwa        .byt 00
 ccx         .byt 00
 ccy         .byt 00
 pposy       .byt 00
-state       .byt 00
+state       .byt $00
     STATE_TITLE = $00
     STATE_GAME  = $01
     STATE_GAMEWIN = $02

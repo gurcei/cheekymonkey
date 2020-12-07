@@ -17,6 +17,7 @@ def convImg(imgpath):
 
   print('; ' + imgpath)
   out = out + '; ' + imgpath + '\n'
+  out = out + imgpath.split('.')[0] + '\n'
   for y0 in range(0, height/8):
     for x0 in range(0, width/8):
       s = '.byt'
