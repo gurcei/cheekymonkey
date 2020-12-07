@@ -1691,14 +1691,14 @@ MONKEYDATA_SIZE = monkeytable - monkey0
 endCode
 
             ; fill to charset
-            * = $1a00
+            * = $1c00
             .dsb (*-endCode), 0
-            * = $1a00
+            * = $1c00
 
 ; During compilation, show how many free bytes are left (to help me keep track of things)
-; upper limit of my mem is start of my custom charset chars, at $1a00
-; (not $1800 anymore, as I'm forgoing the alphanumerics, to save space ;))
-FREE_BYTES = $1a00 - endCode
+; upper limit of my mem is start of my custom charset chars, at $1c00
+; (not $1800 anymore, as I'm forgoing the alphanumerics and a bit beyond, to save space ;))
+FREE_BYTES = $1c00 - endCode
 #print FREE_BYTES
 
 
@@ -1708,7 +1708,7 @@ FREE_BYTES = $1a00 - endCode
 startCharset
             ; add my unique characters here
             ; currently 464 bytes long (58 chars)
-            ; mem range is 1a00 (6656) to 1fd0 (7120)
+            ; mem range is 1c00 (7168) to 1fd0 (7120)
 #include "charset.s"
 endCharset
 CHARSET_SIZE = endCharset - startCharset

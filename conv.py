@@ -39,7 +39,7 @@ app = wx.App()
 imgs = glob.glob('*.png')
 f = open('charset.s', 'wt')
 fi = open('spridx.s', 'wt')
-idx = 64
+idx = 128
 
 for img in imgs:
   fi.write('IMG_'+img.split('.')[0].upper() + ' = ${:02x}\n'.format(idx))
