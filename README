@@ -36,3 +36,10 @@ This has been my first 100% assembly game. Prior to this, I had dabbled in assem
 I'll share the source-code on github, in-case others might want to inspect and explore, though if others have plans to make use of it in their own projects in some way, it'd be nice if I were asked, or some credit/acknowledgement given ;)
 
 Apart from that, no worries :)
+
+Compilation
+-----------
+I made use of the xa65 compiler, source-code available here:
+- http://www.floodgap.com/retrotech/xa/
+
+I was able to compile under both MacOSX and MinGW in Windows (with a few tweaks needed to the Makefile)
