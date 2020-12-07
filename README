@@ -29,17 +29,27 @@ Left & Right = Move monkey left & right
  Left + Fire = Throw coconut to the left
 Right + Fire = Throw coconut to the right 
 
-My Ramblings
-------------
-This has been my first 100% assembly game. Prior to this, I had dabbled in assembly, written small helper routines that were called from BASIC. So I enjoyed the challenge of getting more comfortable with expressing game-play via assembly.
-
-I'll share the source-code on github, in-case others might want to inspect and explore, though if others have plans to make use of it in their own projects in some way, it'd be nice if I were asked, or some credit/acknowledgement given ;)
-
-Apart from that, no worries :)
-
 Compilation
 -----------
 I made use of the xa65 compiler, source-code available here:
 - http://www.floodgap.com/retrotech/xa/
 
 I was able to compile under both MacOSX and MinGW in Windows (with a few tweaks needed to the Makefile)
+
+My Ramblings
+------------
+This has been my first 100% assembly game. Prior to this, I had dabbled in assembly, written small helper routines that were called from BASIC. So I enjoyed the challenge of getting more comfortable with expressing game-play via assembly.
+
+As for what influenced me, I just wanted to create something simple and cute. I had a simple idea in my head: hey, maybe it'd be nice to have a game where monkeys throw coconuts at each other.
+
+I'm fairly time-poor, with work and a 2 year old daughter keeping me fairly busy. So my decision to write a game for the VIC20 with no RAM expansion was very intentional, to force the scope of development to be small-scale and not let development time get too out of hand :)
+
+I wanted to draw simple/cute 16x16 pixel artwork for it via paintbrush. I wanted to document the development journey in short spurts via posts to theC64 facebook forum too:
+- https://www.facebook.com/groups/209280506324242
+
+My hope in doing so was to help continue promoting the existence of the competition, with an additional hope of inspiring or motivating others to join in the competition too. I had hoped that if others could see how I tackled the task in small incremental chunks, that if they had a simple idea of their own that they wanted to bring to life, they could tackle it in a similar fashion too.
+
+I'll share the source-code on github, in-case others might want to inspect and explore, though if others have plans to make use of it in their own projects in some way, it'd be nice if I were asked, or some credit/acknowledgement given ;)
+
+Apart from that, no worries :)
+
